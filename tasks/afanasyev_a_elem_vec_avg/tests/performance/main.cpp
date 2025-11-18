@@ -1,5 +1,14 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <numeric>
+#include <random>
+#include <vector>
+
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
 #include "afanasyev_a_elem_vec_avg/mpi/include/ops_mpi.hpp"
 #include "afanasyev_a_elem_vec_avg/seq/include/ops_seq.hpp"
@@ -8,22 +17,50 @@
 namespace afanasyev_a_elem_vec_avg {
 
 class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
-  InType input_data_{};
+ public:
+  // Размер вектора для теста производительности (10 миллионов элементов)
+  static constexpr int kVectorSize = 10000000;
 
+ protected:
   void SetUp() override {
-    input_data_ = kCount_;
+    // 1. Генерация тестовых данных
+    if (kVectorSize <= 0) {
+      input_data_ = {};
+      expected_output_ = 0.0;
+    } else {
+      input_data_.resize(kVectorSize);
+
+      // ВАЖНО: Используем фиксированный seed (42), чтобы все MPI-процессы
+      // сгенерировали абсолютно одинаковые данные.
+      std::mt19937 gen(42);
+      std::uniform_int_distribution<> distrib(-1000, 1000);
+
+      for (int i = 0; i < kVectorSize; ++i) {
+        input_data_[i] = distrib(gen);
+      }
+
+      // 2. Расчет ожидаемого результата
+      long long sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
+      expected_output_ = static_cast<double>(sum) / kVectorSize;
+    }
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
+    // Проверка с допуском для чисел с плавающей точкой
+    const double tolerance = 1e-5;
+    return std::abs(output_data - expected_output_) < tolerance;
   }
 
   InType GetTestInputData() final {
     return input_data_;
   }
+
+ private:
+  InType input_data_;
+  OutType expected_output_;
 };
 
+// Регистрация тестов
 TEST_P(AfanasyevAElemVecAvgPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
@@ -35,6 +72,6 @@ const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
 const auto kPerfTestName = AfanasyevAElemVecAvgPerfTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, AfanasyevAElemVecAvgPerfTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(VectorAveragePerfTests, AfanasyevAElemVecAvgPerfTests, kGtestValues, kPerfTestName);
 
 }  // namespace afanasyev_a_elem_vec_avg
