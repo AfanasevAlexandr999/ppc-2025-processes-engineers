@@ -19,7 +19,7 @@ namespace afanasyev_a_elem_vec_avg {
 class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  public:
   // Размер вектора для теста производительности (10 миллионов элементов)
-  static constexpr int kVectorSize = 10000000;
+  static constexpr int kVectorSize = 100000000;
 
  protected:
   void SetUp() override {
