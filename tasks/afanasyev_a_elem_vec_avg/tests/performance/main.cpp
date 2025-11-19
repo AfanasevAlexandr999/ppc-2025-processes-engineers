@@ -24,7 +24,7 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
  protected:
   void SetUp() override {
     // 1. Генерация тестовых данных
-    if (kVectorSize <= 0) {
+    if constexpr (kVectorSize <= 0) {
       input_data_ = {};
       expected_output_ = 0.0;
     } else {
