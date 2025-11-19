@@ -12,7 +12,7 @@ AfanasyevAElemVecAvgSEQ::AfanasyevAElemVecAvgSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
   // Используем 0.0, так как OutType должен быть double
-  GetOutput() = 0.0; 
+  GetOutput() = 0.0;
 }
 
 bool AfanasyevAElemVecAvgSEQ::ValidationImpl() {
@@ -25,22 +25,22 @@ bool AfanasyevAElemVecAvgSEQ::PreProcessingImpl() {
 }
 
 bool AfanasyevAElemVecAvgSEQ::RunImpl() {
-  const InType& vec = GetInput();
+  const InType &vec = GetInput();
   int size = vec.size();
 
   if (size == 0) {
     GetOutput() = 0.0;
-    return true; 
+    return true;
   }
 
-  // 1. Вычисление суммы всех элементов. Используем long long для суммы, 
+  // 1. Вычисление суммы всех элементов. Используем long long для суммы,
   // чтобы избежать переполнения.
   long long sum = std::accumulate(vec.begin(), vec.end(), 0LL);
-  
+
   // 2. Вычисление среднего значения.
   GetOutput() = static_cast<OutType>(sum) / size;
 
-  return true; 
+  return true;
 }
 
 bool AfanasyevAElemVecAvgSEQ::PostProcessingImpl() {

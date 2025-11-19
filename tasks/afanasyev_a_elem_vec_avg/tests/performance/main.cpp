@@ -65,8 +65,8 @@ TEST_P(AfanasyevAElemVecAvgPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, AfanasyevAElemVecAvgMPI, AfanasyevAElemVecAvgSEQ>(PPC_SETTINGS_afanasyev_a_elem_vec_avg);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, AfanasyevAElemVecAvgMPI, AfanasyevAElemVecAvgSEQ>(
+    PPC_SETTINGS_afanasyev_a_elem_vec_avg);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
