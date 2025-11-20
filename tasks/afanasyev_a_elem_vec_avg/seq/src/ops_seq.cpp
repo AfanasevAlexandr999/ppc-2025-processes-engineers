@@ -2,20 +2,23 @@
 
 #include <numeric>
 #include <vector>
+#include <cstdint> // Fix: header for int64_t if needed
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
+#include "util/include/util.hpp"
 
 namespace afanasyev_a_elem_vec_avg {
+
+using InType = std::vector<int>; 
+using OutType = double;
 
 AfanasyevAElemVecAvgSEQ::AfanasyevAElemVecAvgSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
-  // Используем 0.0, так как OutType должен быть double
-  GetOutput() = 0.0;
+  GetOutput() = 0.0; 
 }
 
 bool AfanasyevAElemVecAvgSEQ::ValidationImpl() {
-  // Аналогично разрешаем пустые векторы
   return true;
 }
 
@@ -24,22 +27,21 @@ bool AfanasyevAElemVecAvgSEQ::PreProcessingImpl() {
 }
 
 bool AfanasyevAElemVecAvgSEQ::RunImpl() {
-  const InType &vec = GetInput();
-  auto size = vec.size();
+  const InType& vec = GetInput();
+  int size = static_cast<int>(vec.size());
 
   if (size == 0) {
     GetOutput() = 0.0;
-    return true;
+    return true; 
   }
 
-  // 1. Вычисление суммы всех элементов. Используем long long для суммы,
-  // чтобы избежать переполнения.
-  int64_t sum = std::accumulate(vec.begin(), vec.end(), 0LL);
+  // Используем long long
+  long long sum = std::accumulate(vec.begin(), vec.end(), 0LL);
+  
+  // Fix: narrowing conversion warning
+  GetOutput() = static_cast<OutType>(sum) / static_cast<double>(size);
 
-  // 2. Вычисление среднего значения.
-  GetOutput() = static_cast<OutType>(sum) / size;
-
-  return true;
+  return true; 
 }
 
 bool AfanasyevAElemVecAvgSEQ::PostProcessingImpl() {
