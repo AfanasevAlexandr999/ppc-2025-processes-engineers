@@ -25,7 +25,7 @@ bool AfanasyevAElemVecAvgSEQ::PreProcessingImpl() {
 
 bool AfanasyevAElemVecAvgSEQ::RunImpl() {
   const InType &vec = GetInput();
-  int size = vec.size();
+  auto size = vec.size();
 
   if (size == 0) {
     GetOutput() = 0.0;
@@ -34,7 +34,7 @@ bool AfanasyevAElemVecAvgSEQ::RunImpl() {
 
   // 1. Вычисление суммы всех элементов. Используем long long для суммы,
   // чтобы избежать переполнения.
-  long long sum = std::accumulate(vec.begin(), vec.end(), 0LL);
+  int64_t sum = std::accumulate(vec.begin(), vec.end(), 0LL);
 
   // 2. Вычисление среднего значения.
   GetOutput() = static_cast<OutType>(sum) / size;

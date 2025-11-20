@@ -48,7 +48,7 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
 
       // 2. Вычисление ожидаемого результата (Reference result)
       // Используем long long для суммы во избежание переполнения
-      long long sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
+      int64_t sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
       expected_output_ = static_cast<double>(sum) / vector_size;
     }
   }

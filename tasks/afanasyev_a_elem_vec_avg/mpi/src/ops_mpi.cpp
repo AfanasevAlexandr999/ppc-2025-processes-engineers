@@ -2,12 +2,10 @@
 
 #include <mpi.h>
 
-#include <algorithm>
 #include <numeric>
 #include <vector>
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace afanasyev_a_elem_vec_avg {
 
@@ -28,12 +26,13 @@ bool AfanasyevAElemVecAvgMPI::PreProcessingImpl() {
 }
 
 bool AfanasyevAElemVecAvgMPI::RunImpl() {
-  int rank, num_processes;
+  int rank = 0; 
+  int num_processes = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
   const InType &global_vec = GetInput();
-  int global_n = global_vec.size();
+  auto global_n = global_vec.size();
 
   if (global_n == 0) {
     GetOutput() = 0.0;
@@ -65,10 +64,10 @@ bool AfanasyevAElemVecAvgMPI::RunImpl() {
                local_n, MPI_INT, 0, MPI_COMM_WORLD);
 
   // 3. Локальное вычисление суммы (используем long long)
-  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);
+  int64_t local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);
 
   // 4. Глобальное суммирование (MPI_Reduce)
-  long long global_sum = 0;
+  int64_t global_sum = 0;
   MPI_Reduce(&local_sum, &global_sum, 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
   // 5. Расчет среднего значения (только процесс 0)

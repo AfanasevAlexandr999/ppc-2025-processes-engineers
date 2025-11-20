@@ -35,7 +35,7 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
       }
 
       // 2. Расчет ожидаемого результата
-      long long sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
+      int64_t sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
       expected_output_ = static_cast<double>(sum) / kVectorSize;
     }
   }
