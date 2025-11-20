@@ -1,15 +1,14 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
+#include <cstdint>  // Используется для int64_t
 #include <numeric>
 #include <random>
 #include <string>
 #include <tuple>
-#include <vector>
+
+// Удалены: <algorithm>, <array>, <vector>, <stdexcept>, <utility>
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
 #include "afanasyev_a_elem_vec_avg/mpi/include/ops_mpi.hpp"
@@ -38,8 +37,6 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
     } else {
       input_data_.resize(vector_size);
 
-      // NOLINT используется, чтобы заглушить ошибку clang-tidy о фиксированном сиде.
-      // Для MPI тестов нам нужна детерминированность.
       std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
@@ -47,8 +44,8 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
         input_data_[i] = distrib(gen);
       }
 
-      // Fix: используем long long
-      long long sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
+      // ИСПРАВЛЕНИЕ: long long заменен на int64_t
+      int64_t sum = std::accumulate(input_data_.begin(), input_data_.end(), static_cast<int64_t>(0));
       expected_output_ = static_cast<double>(sum) / vector_size;
     }
   }
@@ -64,7 +61,7 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
 
  private:
   InType input_data_;
-  OutType expected_output_ = 0.0;  // Fix: Инициализация члена класса
+  OutType expected_output_ = 0.0;
 };
 
 namespace {

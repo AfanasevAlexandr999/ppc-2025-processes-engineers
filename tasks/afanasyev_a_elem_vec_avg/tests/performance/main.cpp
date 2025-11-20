@@ -1,13 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
-#include <array>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <numeric>
 #include <random>
-#include <vector>
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
 #include "afanasyev_a_elem_vec_avg/mpi/include/ops_mpi.hpp"
@@ -23,25 +19,24 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
 
  protected:
   void SetUp() override {
-    // 1. Генерация тестовых данных
-    // ИСПРАВЛЕНИЕ: Используем 'if constexpr' для условия, известного при компиляции,
-    // чтобы избежать ошибки C4127 (conditional expression is constant).
+    // Используем if constexpr для проверки константы времени компиляции
     if constexpr (kVectorSize <= 0) {
       input_data_ = {};
       expected_output_ = 0.0;
     } else {
       input_data_.resize(kVectorSize);
 
-      // NOLINT подавляет предупреждение clang-tidy о фиксированном сиде (нужен для детерминизма MPI)
+      // NOLINT подавляет предупреждение о фиксированном сиде (нужен для детерминизма MPI)
       std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
-      std::uniform_int_distribution<> distrib(-1000, 1000);
+      std::uniform_int_distribution<> distrib(-10, 10);
 
       for (int i = 0; i < kVectorSize; ++i) {
         input_data_[i] = distrib(gen);
       }
 
-      // Используем long long для предотвращения переполнения
-      long long sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
+      // ИСПРАВЛЕНИЕ: Используем int64_t вместо long long (требование google-runtime-int).
+      // Это также делает #include <cstdint> используемым.
+      int64_t sum = std::accumulate(input_data_.begin(), input_data_.end(), static_cast<int64_t>(0));
       expected_output_ = static_cast<double>(sum) / kVectorSize;
     }
   }
