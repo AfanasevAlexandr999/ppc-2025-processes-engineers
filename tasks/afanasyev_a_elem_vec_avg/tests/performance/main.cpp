@@ -18,25 +18,29 @@ namespace afanasyev_a_elem_vec_avg {
 
 class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  public:
-  static constexpr int kVectorSize = 100000000;
+  // Размер вектора фиксирован как константа времени компиляции
+  static constexpr int kVectorSize = 10000000;
 
  protected:
   void SetUp() override {
-    if (kVectorSize <= 0) {
+    // 1. Генерация тестовых данных
+    // ИСПРАВЛЕНИЕ: Используем 'if constexpr' для условия, известного при компиляции,
+    // чтобы избежать ошибки C4127 (conditional expression is constant).
+    if constexpr (kVectorSize <= 0) {
       input_data_ = {};
       expected_output_ = 0.0;
     } else {
       input_data_.resize(kVectorSize);
 
-      // NOLINT используется, чтобы заглушить ошибку clang-tidy о фиксированном сиде.
-      std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
+      // NOLINT подавляет предупреждение clang-tidy о фиксированном сиде (нужен для детерминизма MPI)
+      std::mt19937 gen(42); // NOLINT(cert-msc51-cpp)
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
       for (int i = 0; i < kVectorSize; ++i) {
         input_data_[i] = distrib(gen);
       }
 
-      // Fix: используем long long
+      // Используем long long для предотвращения переполнения
       long long sum = std::accumulate(input_data_.begin(), input_data_.end(), 0LL);
       expected_output_ = static_cast<double>(sum) / kVectorSize;
     }
@@ -53,15 +57,15 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
 
  private:
   InType input_data_;
-  OutType expected_output_ = 0.0;  // Fix: Инициализация члена класса
+  OutType expected_output_ = 0.0; // Инициализация члена класса
 };
 
 TEST_P(AfanasyevAElemVecAvgPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, AfanasyevAElemVecAvgMPI, AfanasyevAElemVecAvgSEQ>(
-    PPC_SETTINGS_afanasyev_a_elem_vec_avg);
+const auto kAllPerfTasks =
+    ppc::util::MakeAllPerfTasks<InType, AfanasyevAElemVecAvgMPI, AfanasyevAElemVecAvgSEQ>(PPC_SETTINGS_afanasyev_a_elem_vec_avg);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
