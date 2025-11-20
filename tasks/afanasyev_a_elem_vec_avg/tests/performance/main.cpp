@@ -33,7 +33,7 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
       input_data_.resize(kVectorSize);
 
       // NOLINT подавляет предупреждение clang-tidy о фиксированном сиде (нужен для детерминизма MPI)
-      std::mt19937 gen(42); // NOLINT(cert-msc51-cpp)
+      std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
       for (int i = 0; i < kVectorSize; ++i) {
@@ -57,15 +57,15 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
 
  private:
   InType input_data_;
-  OutType expected_output_ = 0.0; // Инициализация члена класса
+  OutType expected_output_ = 0.0;  // Инициализация члена класса
 };
 
 TEST_P(AfanasyevAElemVecAvgPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, AfanasyevAElemVecAvgMPI, AfanasyevAElemVecAvgSEQ>(PPC_SETTINGS_afanasyev_a_elem_vec_avg);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, AfanasyevAElemVecAvgMPI, AfanasyevAElemVecAvgSEQ>(
+    PPC_SETTINGS_afanasyev_a_elem_vec_avg);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
