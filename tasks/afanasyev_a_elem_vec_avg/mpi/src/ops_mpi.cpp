@@ -2,17 +2,17 @@
 
 #include <mpi.h>
 
+#include <algorithm>
 #include <numeric>
 #include <vector>
-#include <algorithm>
 
-#include "afanasyev_a_elem_vec_avg/common/include/common.hpp" 
+#include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
 #include "util/include/util.hpp"
 
 namespace afanasyev_a_elem_vec_avg {
 
-using T = int; 
-using InType = std::vector<T>; 
+using T = int;
+using InType = std::vector<T>;
 using OutType = double;
 
 AfanasyevAElemVecAvgMPI::AfanasyevAElemVecAvgMPI(const InType &in) {
@@ -30,71 +30,54 @@ bool AfanasyevAElemVecAvgMPI::PreProcessingImpl() {
 }
 
 bool AfanasyevAElemVecAvgMPI::RunImpl() {
-    int rank = 0;
-    int num_processes = 0;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+  int rank = 0;
+  int num_processes = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
-    const InType& global_vec = GetInput();
-    // static_cast для устранения narrowing conversion warning
-    int global_n = static_cast<int>(global_vec.size());
+  const InType &global_vec = GetInput();
+  // static_cast для устранения narrowing conversion warning
+  int global_n = static_cast<int>(global_vec.size());
 
-    if (global_n == 0) {
-        GetOutput() = 0.0; 
-        MPI_Bcast(static_cast<void*>(&GetOutput()), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        return true; 
-    }
+  if (global_n == 0) {
+    GetOutput() = 0.0;
+    MPI_Bcast(static_cast<void *>(&GetOutput()), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    return true;
+  }
 
-    std::vector<int> send_counts(num_processes);
-    std::vector<int> displs(num_processes);
-    int chunk_size = global_n / num_processes;
-    int remainder = global_n % num_processes;
-    int current_displacement = 0;
+  std::vector<int> send_counts(num_processes);
+  std::vector<int> displs(num_processes);
+  int chunk_size = global_n / num_processes;
+  int remainder = global_n % num_processes;
+  int current_displacement = 0;
 
-    for (int i = 0; i < num_processes; ++i) {
-        int count = chunk_size + (i < remainder ? 1 : 0);
-        send_counts[i] = count;
-        displs[i] = current_displacement;
-        current_displacement += count;
-    }
-    
-    int local_n = send_counts[rank];
-    std::vector<T> local_vec(local_n);
+  for (int i = 0; i < num_processes; ++i) {
+    int count = chunk_size + (i < remainder ? 1 : 0);
+    send_counts[i] = count;
+    displs[i] = current_displacement;
+    current_displacement += count;
+  }
 
-    MPI_Scatterv(rank == 0 ? global_vec.data() : nullptr, 
-                 send_counts.data(), 
-                 displs.data(),      
-                 MPI_INT,            
-                 local_vec.data(),   
-                 local_n,            
-                 MPI_INT,            
-                 0,                  
-                 MPI_COMM_WORLD);
+  int local_n = send_counts[rank];
+  std::vector<T> local_vec(local_n);
 
-    // Используем long long вместо int64_t для соответствия MPI_LONG_LONG
-    long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);
+  MPI_Scatterv(rank == 0 ? global_vec.data() : nullptr, send_counts.data(), displs.data(), MPI_INT, local_vec.data(),
+               local_n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    long long global_sum = 0;
-    MPI_Reduce(&local_sum, 
-               &global_sum, 
-               1, 
-               MPI_LONG_LONG, 
-               MPI_SUM, 
-               0, 
-               MPI_COMM_WORLD);
+  // Используем long long вместо int64_t для соответствия MPI_LONG_LONG
+  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);
 
-    if (rank == 0) {
-      // Явное приведение к double для устранения warning
-      GetOutput() = static_cast<OutType>(global_sum) / static_cast<double>(global_n);
-    }
-    
-    MPI_Bcast(static_cast<void*>(&GetOutput()), 
-              1, 
-              MPI_DOUBLE, 
-              0, 
-              MPI_COMM_WORLD);
-  
-    return true; 
+  long long global_sum = 0;
+  MPI_Reduce(&local_sum, &global_sum, 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    // Явное приведение к double для устранения warning
+    GetOutput() = static_cast<OutType>(global_sum) / static_cast<double>(global_n);
+  }
+
+  MPI_Bcast(static_cast<void *>(&GetOutput()), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  return true;
 }
 
 bool AfanasyevAElemVecAvgMPI::PostProcessingImpl() {

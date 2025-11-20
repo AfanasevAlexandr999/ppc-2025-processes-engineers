@@ -37,10 +37,10 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
       expected_output_ = 0.0;
     } else {
       input_data_.resize(vector_size);
-      
+
       // NOLINT используется, чтобы заглушить ошибку clang-tidy о фиксированном сиде.
       // Для MPI тестов нам нужна детерминированность.
-      std::mt19937 gen(42); // NOLINT(cert-msc51-cpp)
+      std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
       for (int i = 0; i < vector_size; ++i) {
@@ -64,7 +64,7 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
 
  private:
   InType input_data_;
-  OutType expected_output_ = 0.0; // Fix: Инициализация члена класса
+  OutType expected_output_ = 0.0;  // Fix: Инициализация члена класса
 };
 
 namespace {
@@ -73,17 +73,13 @@ TEST_P(AfanasyevAElemVecAvgFuncTests, CalculateAverage) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 5> kTestParam = {
-    std::make_tuple(100, "Normal"),
-    std::make_tuple(10, "Small"),
-    std::make_tuple(0, "EmptyVector"), 
-    std::make_tuple(1, "SingleElement"),
-    std::make_tuple(10000, "Large")
-};
+const std::array<TestType, 5> kTestParam = {std::make_tuple(100, "Normal"), std::make_tuple(10, "Small"),
+                                            std::make_tuple(0, "EmptyVector"), std::make_tuple(1, "SingleElement"),
+                                            std::make_tuple(10000, "Large")};
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<AfanasyevAElemVecAvgMPI, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_elem_vec_avg),
-                   ppc::util::AddFuncTask<AfanasyevAElemVecAvgSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_elem_vec_avg));
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<AfanasyevAElemVecAvgMPI, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_elem_vec_avg),
+    ppc::util::AddFuncTask<AfanasyevAElemVecAvgSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_elem_vec_avg));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
