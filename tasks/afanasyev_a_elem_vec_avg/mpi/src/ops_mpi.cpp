@@ -26,7 +26,7 @@ bool AfanasyevAElemVecAvgMPI::PreProcessingImpl() {
 }
 
 bool AfanasyevAElemVecAvgMPI::RunImpl() {
-  int rank = 0; 
+  int rank = 0;
   int num_processes = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
