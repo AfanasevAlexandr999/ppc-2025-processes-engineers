@@ -1,15 +1,12 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <numeric>
 #include <random>
 #include <string>
 #include <tuple>
-#include <vector>
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
 #include "afanasyev_a_elem_vec_avg/mpi/include/ops_mpi.hpp"

@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace afanasyev_a_elem_vec_avg {
 
