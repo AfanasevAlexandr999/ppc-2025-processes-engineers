@@ -9,10 +9,6 @@
 
 namespace afanasyev_a_elem_vec_avg {
 
-using T = int;
-using InType = std::vector<T>;
-using OutType = double;
-
 AfanasyevAElemVecAvgMPI::AfanasyevAElemVecAvgMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
@@ -34,7 +30,6 @@ bool AfanasyevAElemVecAvgMPI::RunImpl() {
   MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
   const InType &global_vec = GetInput();
-  // static_cast to eliminate narrowing conversion warning
   int global_n = static_cast<int>(global_vec.size());
 
   if (global_n == 0) {
@@ -62,10 +57,9 @@ bool AfanasyevAElemVecAvgMPI::RunImpl() {
   MPI_Scatterv(rank == 0 ? global_vec.data() : nullptr, send_counts.data(), displs.data(), MPI_INT, local_vec.data(),
                local_n, MPI_INT, 0, MPI_COMM_WORLD);
 
-  // NOLINT to suppress google-runtime-int (int64_t) because MPI_LONG_LONG requires long long
-  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);  // NOLINT(google-runtime-int)
+  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);
 
-  long long global_sum = 0;  // NOLINT(google-runtime-int)
+  long long global_sum = 0;
   MPI_Reduce(&local_sum, &global_sum, 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {

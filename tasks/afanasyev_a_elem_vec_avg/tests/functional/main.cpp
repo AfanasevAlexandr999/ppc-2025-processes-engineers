@@ -3,13 +3,11 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>  // Используется для int64_t
+#include <cstdint>
 #include <numeric>
 #include <random>
 #include <string>
 #include <tuple>
-
-// Удалены: <algorithm>, <array>, <vector>, <stdexcept>, <utility>
 
 #include "afanasyev_a_elem_vec_avg/common/include/common.hpp"
 #include "afanasyev_a_elem_vec_avg/mpi/include/ops_mpi.hpp"
@@ -38,14 +36,13 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
     } else {
       input_data_.resize(vector_size);
 
-      std::mt19937 gen(42);  // NOLINT(cert-msc51-cpp)
+      std::mt19937 gen(42);
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
       for (int i = 0; i < vector_size; ++i) {
         input_data_[i] = distrib(gen);
       }
 
-      // ИСПРАВЛЕНИЕ: long long заменен на int64_t
       int64_t sum = std::accumulate(input_data_.begin(), input_data_.end(), static_cast<int64_t>(0));
       expected_output_ = static_cast<double>(sum) / vector_size;
     }
