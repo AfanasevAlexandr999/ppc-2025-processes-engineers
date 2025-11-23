@@ -9,10 +9,6 @@
 
 namespace afanasyev_a_elem_vec_avg {
 
-using T = int;
-using InType = std::vector<T>;
-using OutType = double;
-
 AfanasyevAElemVecAvgMPI::AfanasyevAElemVecAvgMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
