@@ -36,7 +36,7 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
     } else {
       input_data_.resize(vector_size);
 
-      std::mt19937 gen(42);
+      std::mt19937 gen(42);  // NOLINT
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
       for (int i = 0; i < vector_size; ++i) {

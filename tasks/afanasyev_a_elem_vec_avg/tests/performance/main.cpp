@@ -24,7 +24,7 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
     } else {
       input_data_.resize(kVectorSize);
 
-      std::mt19937 gen(42);
+      std::mt19937 gen(42);  // NOLINT
       std::uniform_int_distribution<> distrib(-10, 10);
 
       for (int i = 0; i < kVectorSize; ++i) {

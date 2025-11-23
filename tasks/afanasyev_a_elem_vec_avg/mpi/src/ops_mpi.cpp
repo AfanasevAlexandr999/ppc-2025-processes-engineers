@@ -57,9 +57,8 @@ bool AfanasyevAElemVecAvgMPI::RunImpl() {
   MPI_Scatterv(rank == 0 ? global_vec.data() : nullptr, send_counts.data(), displs.data(), MPI_INT, local_vec.data(),
                local_n, MPI_INT, 0, MPI_COMM_WORLD);
 
-  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);
-
-  long long global_sum = 0;
+  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);  // NOLINT
+  long long global_sum = 0;                                                        // NOLINT
   MPI_Reduce(&local_sum, &global_sum, 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
