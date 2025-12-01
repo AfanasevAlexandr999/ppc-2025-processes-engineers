@@ -2,6 +2,7 @@
 
 #include <mpi.h>
 
+#include <cstdint>
 #include <numeric>
 #include <vector>
 
@@ -52,14 +53,15 @@ bool AfanasyevAElemVecAvgMPI::RunImpl() {
   }
 
   int local_n = send_counts[rank];
-  std::vector<T> local_vec(local_n);
+  std::vector<int> local_vec(local_n);
 
   MPI_Scatterv(rank == 0 ? global_vec.data() : nullptr, send_counts.data(), displs.data(), MPI_INT, local_vec.data(),
                local_n, MPI_INT, 0, MPI_COMM_WORLD);
 
-  long long local_sum = std::accumulate(local_vec.begin(), local_vec.end(), 0LL);  // NOLINT
-  long long global_sum = 0;                                                        // NOLINT
-  MPI_Reduce(&local_sum, &global_sum, 1, MPI_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+  int64_t local_sum = std::accumulate(local_vec.begin(), local_vec.end(), static_cast<int64_t>(0));
+  int64_t global_sum = 0;
+
+  MPI_Reduce(&local_sum, &global_sum, 1, MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
     GetOutput() = static_cast<OutType>(global_sum) / static_cast<double>(global_n);
