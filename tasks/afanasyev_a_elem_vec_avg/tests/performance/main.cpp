@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <mpi.h>  // Добавлен заголовок MPI для MPI_Bcast
 
 #include <cmath>
 #include <cstdint>
@@ -15,7 +14,7 @@ namespace afanasyev_a_elem_vec_avg {
 
 class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  public:
-  static constexpr int kVectorSize = 10000000;
+  static constexpr int kVectorSize = 100000000;
 
  protected:
   void SetUp() override {
@@ -24,17 +23,8 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
       expected_output_ = 0.0;
     } else {
       input_data_.resize(kVectorSize);
-      int rank = 0;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-      unsigned int seed = 0;
-      if (rank == 0) {
-        std::random_device rd;
-        seed = rd();
-      }
-
-      MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-      std::mt19937 gen(seed);
+      std::mt19937 gen(42);  // NOLINT
       std::uniform_int_distribution<> distrib(-10, 10);
 
       for (int i = 0; i < kVectorSize; ++i) {
