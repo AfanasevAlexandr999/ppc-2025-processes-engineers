@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <mpi.h>
 
 #include <array>
 #include <cmath>
@@ -36,7 +37,24 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
     } else {
       input_data_.resize(vector_size);
 
-      std::mt19937 gen(42);  // NOLINT
+      unsigned int seed = 0;
+      int is_mpi_initialized = 0;
+      MPI_Initialized(&is_mpi_initialized);
+
+      if (is_mpi_initialized) {
+        int rank = 0;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if (rank == 0) {
+          std::random_device rd;
+          seed = rd();
+        }
+        MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+      } else {
+        std::random_device rd;
+        seed = rd();
+      }
+
+      std::mt19937 gen(seed);
       std::uniform_int_distribution<> distrib(-1000, 1000);
 
       for (int i = 0; i < vector_size; ++i) {
