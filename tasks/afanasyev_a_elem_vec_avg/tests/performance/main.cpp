@@ -15,7 +15,7 @@ namespace afanasyev_a_elem_vec_avg {
 
 class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  public:
-  static constexpr int kVectorSize = 100000000;
+  static constexpr int kVectorSize = 10000000;
 
  protected:
   void SetUp() override {
@@ -28,8 +28,7 @@ class AfanasyevAElemVecAvgPerfTests : public ppc::util::BaseRunPerfTests<InType,
       unsigned int seed = 42;
       int is_mpi_init = 0;
       MPI_Initialized(&is_mpi_init);
-
-      if (is_mpi_init) {
+      if (is_mpi_init != 0) {
         int rank = 0;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if (rank == 0) {

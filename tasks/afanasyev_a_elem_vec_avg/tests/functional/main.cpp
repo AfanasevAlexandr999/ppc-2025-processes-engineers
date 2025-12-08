@@ -41,7 +41,7 @@ class AfanasyevAElemVecAvgFuncTests : public ppc::util::BaseRunFuncTests<InType,
       int is_mpi_initialized = 0;
       MPI_Initialized(&is_mpi_initialized);
 
-      if (is_mpi_initialized) {
+      if (is_mpi_initialized != 0) {
         int rank = 0;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if (rank == 0) {
