@@ -1,40 +1,98 @@
 #include <gtest/gtest.h>
+#include <mpi.h>
+
+#include <chrono>
 
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
 #include "afanasyev_a_it_seidel_method/mpi/include/ops_mpi.hpp"
 #include "afanasyev_a_it_seidel_method/seq/include/ops_seq.hpp"
-#include "util/include/perf_test_util.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 
-class ExampleRunPerfTestProcesses2 : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
-  InType input_data_{};
+TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_Performance) {
+  InType input = {100.0, 0.0001, 1000.0};
+  AfanasyevAItSeidelMethodSEQ task(input);
 
-  void SetUp() override {
-    input_data_ = kCount_;
-  }
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
 
-  bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
-  }
+  auto start = std::chrono::high_resolution_clock::now();
+  EXPECT_TRUE(task.Run());
+  auto end = std::chrono::high_resolution_clock::now();
 
-  InType GetTestInputData() final {
-    return input_data_;
-  }
-};
+  EXPECT_TRUE(task.PostProcessing());
 
-TEST_P(ExampleRunPerfTestProcesses2, RunPerfModes) {
-  ExecuteTest(GetParam());
+  auto output = task.GetOutput();
+  EXPECT_EQ(output.size(), 100u);
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, AfanasyevAItSeidelMethodMPI, AfanasyevAItSeidelMethodSEQ>(PPC_SETTINGS_afanasyev_a_it_seidel_method);
+TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_SmallSystem) {
+  InType input = {50.0, 0.001, 500.0};
+  AfanasyevAItSeidelMethodSEQ task(input);
 
-const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
 
-const auto kPerfTestName = ExampleRunPerfTestProcesses2::CustomPerfTestName;
+  auto start = std::chrono::high_resolution_clock::now();
+  EXPECT_TRUE(task.Run());
+  auto end = std::chrono::high_resolution_clock::now();
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ExampleRunPerfTestProcesses2, kGtestValues, kPerfTestName);
+  EXPECT_TRUE(task.PostProcessing());
+
+  auto output = task.GetOutput();
+  EXPECT_EQ(output.size(), 50u);
+}
+
+TEST(AfanasyevAItSeidelMethodPerfTests, MPI_Performance) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  InType input = {100.0, 0.0001, 1000.0};
+  AfanasyevAItSeidelMethodMPI task(input);
+
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  auto start = std::chrono::high_resolution_clock::now();
+
+  EXPECT_TRUE(task.Run());
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  auto end = std::chrono::high_resolution_clock::now();
+
+  EXPECT_TRUE(task.PostProcessing());
+
+  if (rank == 0) {
+    auto output = task.GetOutput();
+    EXPECT_EQ(output.size(), 100u);
+  }
+}
+
+TEST(AfanasyevAItSeidelMethodPerfTests, MPI_SmallSystem) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  InType input = {50.0, 0.001, 500.0};
+  AfanasyevAItSeidelMethodMPI task(input);
+
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  auto start = std::chrono::high_resolution_clock::now();
+
+  EXPECT_TRUE(task.Run());
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  auto end = std::chrono::high_resolution_clock::now();
+
+  EXPECT_TRUE(task.PostProcessing());
+
+  if (rank == 0) {
+    auto output = task.GetOutput();
+    EXPECT_EQ(output.size(), 50u);
+  }
+}
 
 }  // namespace afanasyev_a_it_seidel_method

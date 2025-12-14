@@ -1,86 +1,106 @@
 #include <gtest/gtest.h>
-#include <stb/stb_image.h>
+#include <mpi.h>
 
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <numeric>
-#include <stdexcept>
-#include <string>
-#include <tuple>
-#include <utility>
+#include <cmath>
 #include <vector>
 
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
 #include "afanasyev_a_it_seidel_method/mpi/include/ops_mpi.hpp"
 #include "afanasyev_a_it_seidel_method/seq/include/ops_seq.hpp"
-#include "util/include/func_test_util.hpp"
-#include "util/include/util.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 
-class NesterovARunFuncTestsProcesses2 : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
- public:
-  static std::string PrintTestParam(const TestType &test_param) {
-    return std::to_string(std::get<0>(test_param)) + "_" + std::get<1>(test_param);
-  }
+TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSEQ_SmallSystem) {
+  InType input = {3.0, 0.001, 100.0};
+  AfanasyevAItSeidelMethodSEQ task(input);
 
- protected:
-  void SetUp() override {
-    int width = -1;
-    int height = -1;
-    int channels = -1;
-    std::vector<uint8_t> img;
-    // Read image in RGB to ensure consistent channel count
-    {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_afanasyev_a_it_seidel_method, "pic.jpg");
-      auto *data = stbi_load(abs_path.c_str(), &width, &height, &channels, STBI_rgb);
-      if (data == nullptr) {
-        throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
-      }
-      channels = STBI_rgb;
-      img = std::vector<uint8_t>(data, data + (static_cast<ptrdiff_t>(width * height * channels)));
-      stbi_image_free(data);
-      if (std::cmp_not_equal(width, height)) {
-        throw std::runtime_error("width != height: ");
-      }
-    }
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+  EXPECT_TRUE(task.Run());
+  EXPECT_TRUE(task.PostProcessing());
 
-    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
-    input_data_ = width - height + std::min(std::accumulate(img.begin(), img.end(), 0), channels);
-  }
-
-  bool CheckTestOutputData(OutType &output_data) final {
-    return (input_data_ == output_data);
-  }
-
-  InType GetTestInputData() final {
-    return input_data_;
-  }
-
- private:
-  InType input_data_ = 0;
-};
-
-namespace {
-
-TEST_P(NesterovARunFuncTestsProcesses2, MatmulFromPic) {
-  ExecuteTest(GetParam());
+  auto output = task.GetOutput();
+  EXPECT_EQ(output.size(), static_cast<size_t>(3));
 }
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3"), std::make_tuple(5, "5"), std::make_tuple(7, "7")};
+TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSEQ_MediumSystem) {
+  InType input = {5.0, 0.0001, 200.0};
+  AfanasyevAItSeidelMethodSEQ task(input);
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<AfanasyevAItSeidelMethodMPI, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_it_seidel_method),
-                   ppc::util::AddFuncTask<AfanasyevAItSeidelMethodSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_it_seidel_method));
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+  EXPECT_TRUE(task.Run());
+  EXPECT_TRUE(task.PostProcessing());
 
-const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
+  auto output = task.GetOutput();
+  EXPECT_EQ(output.size(), static_cast<size_t>(5));
+}
 
-const auto kPerfTestName = NesterovARunFuncTestsProcesses2::PrintFuncTestName<NesterovARunFuncTestsProcesses2>;
+TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSEQ_LargeSystem) {
+  InType input = {7.0, 0.00001, 300.0};
+  AfanasyevAItSeidelMethodSEQ task(input);
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, NesterovARunFuncTestsProcesses2, kGtestValues, kPerfTestName);
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+  EXPECT_TRUE(task.Run());
+  EXPECT_TRUE(task.PostProcessing());
 
-}  // namespace
+  auto output = task.GetOutput();
+  EXPECT_EQ(output.size(), static_cast<size_t>(7));
+}
+
+TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMPI_SmallSystem) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  InType input = {3.0, 0.001, 100.0};
+  AfanasyevAItSeidelMethodMPI task(input);
+
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+  EXPECT_TRUE(task.Run());
+  EXPECT_TRUE(task.PostProcessing());
+
+  if (rank == 0) {
+    auto output = task.GetOutput();
+    EXPECT_EQ(output.size(), static_cast<size_t>(3));
+  }
+}
+
+TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMPI_MediumSystem) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  InType input = {5.0, 0.0001, 200.0};
+  AfanasyevAItSeidelMethodMPI task(input);
+
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+  EXPECT_TRUE(task.Run());
+  EXPECT_TRUE(task.PostProcessing());
+
+  if (rank == 0) {
+    auto output = task.GetOutput();
+    EXPECT_EQ(output.size(), static_cast<size_t>(5));
+  }
+}
+
+TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMPI_LargeSystem) {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  InType input = {7.0, 0.00001, 300.0};
+  AfanasyevAItSeidelMethodMPI task(input);
+
+  EXPECT_TRUE(task.Validation());
+  EXPECT_TRUE(task.PreProcessing());
+  EXPECT_TRUE(task.Run());
+  EXPECT_TRUE(task.PostProcessing());
+
+  if (rank == 0) {
+    auto output = task.GetOutput();
+    EXPECT_EQ(output.size(), static_cast<size_t>(7));
+  }
+}
 
 }  // namespace afanasyev_a_it_seidel_method
