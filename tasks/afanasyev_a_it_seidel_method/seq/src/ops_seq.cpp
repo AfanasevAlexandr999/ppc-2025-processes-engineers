@@ -52,7 +52,7 @@ bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
         if (i == j) {
           A_[i][j] = system_size + 1.0;
         } else {
-          A_[i][j] = 1.0 / (abs(i - j) + 1.0);
+          A_[i][j] = 1.0 / (std::abs(i - j) + 1.0);
         }
       }
     }
@@ -73,10 +73,19 @@ bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
 bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
   try {
     int system_size = static_cast<int>(A_.size());
+    if (system_size == 0) {
+      return false;
+    }
+
     std::vector<double> prev_x(system_size, 0.0);
 
     for (int iter = 0; iter < max_iterations_; ++iter) {
-      prev_x = x_;
+      // Безопасное копирование с проверкой
+      if (prev_x.size() == x_.size()) {
+        for (int i = 0; i < system_size; ++i) {
+          prev_x[i] = x_[i];
+        }
+      }
 
       for (int i = 0; i < system_size; ++i) {
         double sum = b_[i];
