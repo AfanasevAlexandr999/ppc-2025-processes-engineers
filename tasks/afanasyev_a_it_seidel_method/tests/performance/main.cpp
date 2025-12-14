@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-#include <chrono>
-
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
 #include "afanasyev_a_it_seidel_method/mpi/include/ops_mpi.hpp"
 #include "afanasyev_a_it_seidel_method/seq/include/ops_seq.hpp"
@@ -16,10 +14,7 @@ TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_Performance) {
   EXPECT_TRUE(task.Validation());
   EXPECT_TRUE(task.PreProcessing());
 
-  auto start = std::chrono::high_resolution_clock::now();
   EXPECT_TRUE(task.Run());
-  auto end = std::chrono::high_resolution_clock::now();
-
   EXPECT_TRUE(task.PostProcessing());
 
   auto output = task.GetOutput();
@@ -33,10 +28,7 @@ TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_SmallSystem) {
   EXPECT_TRUE(task.Validation());
   EXPECT_TRUE(task.PreProcessing());
 
-  auto start = std::chrono::high_resolution_clock::now();
   EXPECT_TRUE(task.Run());
-  auto end = std::chrono::high_resolution_clock::now();
-
   EXPECT_TRUE(task.PostProcessing());
 
   auto output = task.GetOutput();
@@ -54,12 +46,8 @@ TEST(AfanasyevAItSeidelMethodPerfTests, MPI_Performance) {
   EXPECT_TRUE(task.PreProcessing());
 
   MPI_Barrier(MPI_COMM_WORLD);
-  auto start = std::chrono::high_resolution_clock::now();
-
   EXPECT_TRUE(task.Run());
-
   MPI_Barrier(MPI_COMM_WORLD);
-  auto end = std::chrono::high_resolution_clock::now();
 
   EXPECT_TRUE(task.PostProcessing());
 
@@ -80,12 +68,8 @@ TEST(AfanasyevAItSeidelMethodPerfTests, MPI_SmallSystem) {
   EXPECT_TRUE(task.PreProcessing());
 
   MPI_Barrier(MPI_COMM_WORLD);
-  auto start = std::chrono::high_resolution_clock::now();
-
   EXPECT_TRUE(task.Run());
-
   MPI_Barrier(MPI_COMM_WORLD);
-  auto end = std::chrono::high_resolution_clock::now();
 
   EXPECT_TRUE(task.PostProcessing());
 
