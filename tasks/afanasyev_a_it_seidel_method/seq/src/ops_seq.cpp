@@ -25,19 +25,7 @@ bool AfanasyevAItSeidelMethodSEQ::ValidationImpl() {
   double epsilon = input[1];
   int max_iterations = static_cast<int>(input[2]);
 
-  if (system_size <= 0) {
-    return false;
-  }
-
-  if (epsilon <= 0) {
-    return false;
-  }
-
-  if (max_iterations <= 0) {
-    return false;
-  }
-
-  return true;
+  return system_size > 0 && epsilon > 0 && max_iterations > 0;
 }
 
 bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
@@ -46,22 +34,31 @@ bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
     epsilon_ = GetInput()[1];
     max_iterations_ = static_cast<int>(GetInput()[2]);
 
-    A_.resize(system_size, std::vector<double>(system_size, 0.0));
+    // Инициализация матрицы A
+    A_.clear();
+    A_.reserve(system_size);
     for (int i = 0; i < system_size; ++i) {
+      std::vector<double> row;
+      row.reserve(system_size);
       for (int j = 0; j < system_size; ++j) {
         if (i == j) {
-          A_[i][j] = system_size + 1.0;
+          row.push_back(system_size + 1.0);
         } else {
-          A_[i][j] = 1.0 / (std::abs(i - j) + 1.0);
+          row.push_back(1.0 / (std::abs(i - j) + 1.0));
         }
       }
+      A_.push_back(std::move(row));
     }
 
-    b_.resize(system_size, 0.0);
+    // Инициализация вектора b
+    b_.clear();
+    b_.reserve(system_size);
     for (int i = 0; i < system_size; ++i) {
-      b_[i] = i + 1.0;
+      b_.push_back(i + 1.0);
     }
 
+    // Инициализация вектора решения x
+    x_.clear();
     x_.resize(system_size, 0.0);
 
     return true;
@@ -77,33 +74,27 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
       return false;
     }
 
-    std::vector<double> prev_x(system_size, 0.0);
-
+    // Простой алгоритм Зейделя
     for (int iter = 0; iter < max_iterations_; ++iter) {
-      // Безопасное копирование с проверкой
-      if (prev_x.size() == x_.size()) {
-        for (int i = 0; i < system_size; ++i) {
-          prev_x[i] = x_[i];
-        }
-      }
+      double max_diff = 0.0;
 
       for (int i = 0; i < system_size; ++i) {
+        double old_x = x_[i];
         double sum = b_[i];
 
+        // Используем уже обновленные значения
         for (int j = 0; j < i; ++j) {
           sum -= A_[i][j] * x_[j];
         }
 
+        // Используем старые значения для еще не обновленных
         for (int j = i + 1; j < system_size; ++j) {
           sum -= A_[i][j] * x_[j];
         }
 
         x_[i] = sum / A_[i][i];
-      }
 
-      double max_diff = 0.0;
-      for (int i = 0; i < system_size; ++i) {
-        double diff = std::abs(x_[i] - prev_x[i]);
+        double diff = std::abs(x_[i] - old_x);
         if (diff > max_diff) {
           max_diff = diff;
         }
@@ -115,7 +106,6 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
     }
 
     GetOutput() = x_;
-
     return true;
   } catch (...) {
     return false;
@@ -125,7 +115,6 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
 bool AfanasyevAItSeidelMethodSEQ::PostProcessingImpl() {
   try {
     int system_size = static_cast<int>(A_.size());
-
     if (system_size != static_cast<int>(x_.size())) {
       return false;
     }
@@ -140,7 +129,6 @@ bool AfanasyevAItSeidelMethodSEQ::PostProcessingImpl() {
     }
 
     residual_norm /= system_size;
-
     return residual_norm < epsilon_ * 10;
   } catch (...) {
     return false;

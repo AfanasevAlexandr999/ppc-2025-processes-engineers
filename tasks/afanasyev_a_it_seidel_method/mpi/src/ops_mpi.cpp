@@ -71,7 +71,10 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
   std::vector<double> global_x(system_size, 0.0);
 
   for (int iter = 0; iter < max_iterations_; ++iter) {
-    std::vector<double> prev_x = global_x;
+    std::vector<double> prev_x(system_size);
+    for (int i = 0; i < system_size; ++i) {
+      prev_x[i] = global_x[i];
+    }
 
     for (int i = start_row; i < end_row; ++i) {
       if (i >= system_size) {
