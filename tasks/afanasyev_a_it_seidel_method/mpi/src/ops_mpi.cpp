@@ -27,20 +27,29 @@ bool AfanasyevAItSeidelMethodMPI::PreProcessingImpl() {
     double epsilon = GetInput()[1];
     int max_iterations = static_cast<int>(GetInput()[2]);
 
-    A_.resize(system_size, std::vector<double>(system_size, 0.0));
-    b_.resize(system_size, 0.0);
-    x_.resize(system_size, 0.0);
-
+    A_.clear();
+    A_.reserve(system_size);
     for (int i = 0; i < system_size; ++i) {
+      std::vector<double> row;
+      row.reserve(system_size);
       for (int j = 0; j < system_size; ++j) {
         if (i == j) {
-          A_[i][j] = system_size + 1.0;
+          row.push_back(system_size + 1.0);
         } else {
-          A_[i][j] = 1.0 / (std::abs(i - j) + 1.0);
+          row.push_back(1.0 / (std::abs(i - j) + 1.0));
         }
       }
-      b_[i] = i + 1.0;
+      A_.push_back(std::move(row));
     }
+
+    b_.clear();
+    b_.reserve(system_size);
+    for (int i = 0; i < system_size; ++i) {
+      b_.push_back(i + 1.0);
+    }
+
+    x_.clear();
+    x_.resize(system_size, 0.0);
 
     epsilon_ = epsilon;
     max_iterations_ = max_iterations;
@@ -109,7 +118,12 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
       if (max_diff < epsilon_) {
         int converged = 1;
         MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        x_.assign(global_x.begin(), global_x.end());
+        if (x_.size() != global_x.size()) {
+          x_.resize(global_x.size());
+        }
+        for (size_t i = 0; i < global_x.size(); ++i) {
+          x_[i] = global_x[i];
+        }
         break;
       }
 
@@ -129,7 +143,12 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (rank == 0) {
-    GetOutput() = x_;
+    OutType output;
+    output.reserve(x_.size());
+    for (size_t i = 0; i < x_.size(); ++i) {
+      output.push_back(x_[i]);
+    }
+    GetOutput() = output;
   } else {
     GetOutput() = std::vector<double>();
   }

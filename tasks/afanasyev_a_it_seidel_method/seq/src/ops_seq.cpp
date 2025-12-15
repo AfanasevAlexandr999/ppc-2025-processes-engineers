@@ -25,7 +25,19 @@ bool AfanasyevAItSeidelMethodSEQ::ValidationImpl() {
   double epsilon = input[1];
   int max_iterations = static_cast<int>(input[2]);
 
-  return system_size > 0 && epsilon > 0 && max_iterations > 0;
+  if (system_size <= 0) {
+    return false;
+  }
+
+  if (epsilon <= 0) {
+    return false;
+  }
+
+  if (max_iterations <= 0) {
+    return false;
+  }
+
+  return true;
 }
 
 bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
@@ -36,25 +48,23 @@ bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
 
     // Инициализация матрицы A
     A_.clear();
-    A_.reserve(system_size);
+    A_.resize(system_size);
     for (int i = 0; i < system_size; ++i) {
-      std::vector<double> row;
-      row.reserve(system_size);
+      A_[i].resize(system_size);
       for (int j = 0; j < system_size; ++j) {
         if (i == j) {
-          row.push_back(system_size + 1.0);
+          A_[i][j] = system_size + 1.0;
         } else {
-          row.push_back(1.0 / (std::abs(i - j) + 1.0));
+          A_[i][j] = 1.0 / (std::abs(i - j) + 1.0);
         }
       }
-      A_.push_back(std::move(row));
     }
 
     // Инициализация вектора b
     b_.clear();
-    b_.reserve(system_size);
+    b_.resize(system_size);
     for (int i = 0; i < system_size; ++i) {
-      b_.push_back(i + 1.0);
+      b_[i] = i + 1.0;
     }
 
     // Инициализация вектора решения x
@@ -105,7 +115,14 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
       }
     }
 
-    GetOutput() = x_;
+    // Безопасное копирование результата
+    OutType output;
+    output.reserve(x_.size());
+    for (const auto &val : x_) {
+      output.push_back(val);
+    }
+    GetOutput() = output;
+
     return true;
   } catch (...) {
     return false;
