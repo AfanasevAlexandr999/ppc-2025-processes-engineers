@@ -1,15 +1,14 @@
 #include "afanasyev_a_it_seidel_method/seq/include/ops_seq.hpp"
 
+#include <algorithm>
 #include <cmath>
-#include <stdexcept>
 #include <vector>
 
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 
-AfanasyevAItSeidelMethodSEQ::AfanasyevAItSeidelMethodSEQ(const InType &in) {
+AfanasyevAItSeidelMethodSEQ::AfanasyevAItSeidelMethodSEQ(const InType &in) : epsilon_(0.0), max_iterations_(0) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
   GetOutput() = std::vector<double>();
@@ -25,19 +24,7 @@ bool AfanasyevAItSeidelMethodSEQ::ValidationImpl() {
   double epsilon = input[1];
   int max_iterations = static_cast<int>(input[2]);
 
-  if (system_size <= 0) {
-    return false;
-  }
-
-  if (epsilon <= 0) {
-    return false;
-  }
-
-  if (max_iterations <= 0) {
-    return false;
-  }
-
-  return true;
+  return system_size > 0 && epsilon > 0 && max_iterations > 0;
 }
 
 bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
@@ -46,7 +33,6 @@ bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
     epsilon_ = GetInput()[1];
     max_iterations_ = static_cast<int>(GetInput()[2]);
 
-    // Инициализация матрицы A
     A_.clear();
     A_.resize(system_size);
     for (int i = 0; i < system_size; ++i) {
@@ -60,14 +46,12 @@ bool AfanasyevAItSeidelMethodSEQ::PreProcessingImpl() {
       }
     }
 
-    // Инициализация вектора b
     b_.clear();
     b_.resize(system_size);
     for (int i = 0; i < system_size; ++i) {
       b_[i] = i + 1.0;
     }
 
-    // Инициализация вектора решения x
     x_.clear();
     x_.resize(system_size, 0.0);
 
@@ -103,11 +87,7 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
         }
 
         x_[i] = sum / A_[i][i];
-
-        double diff = std::abs(x_[i] - old_x);
-        if (diff > max_diff) {
-          max_diff = diff;
-        }
+        max_diff = std::max(max_diff, std::abs(x_[i] - old_x));
       }
 
       if (max_diff < epsilon_) {
@@ -132,7 +112,7 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
 bool AfanasyevAItSeidelMethodSEQ::PostProcessingImpl() {
   try {
     int system_size = static_cast<int>(A_.size());
-    if (system_size != static_cast<int>(x_.size())) {
+    if (static_cast<int>(x_.size()) != system_size) {
       return false;
     }
 

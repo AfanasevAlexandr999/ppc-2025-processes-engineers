@@ -1,7 +1,8 @@
 #pragma once
 
+#include <vector>
+
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
-#include "task/include/task.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 

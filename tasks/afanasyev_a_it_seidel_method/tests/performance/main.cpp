@@ -7,7 +7,8 @@
 
 namespace afanasyev_a_it_seidel_method {
 
-TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_Performance) {
+// SEQ тест производительности
+TEST(AfanasyevAItSeidelMethodPerfTests, SeqPerformance) {
   InType input = {100.0, 0.0001, 1000.0};
   AfanasyevAItSeidelMethodSEQ task(input);
 
@@ -18,10 +19,11 @@ TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_Performance) {
   EXPECT_TRUE(task.PostProcessing());
 
   auto output = task.GetOutput();
-  EXPECT_EQ(output.size(), 100u);
+  EXPECT_EQ(output.size(), static_cast<size_t>(100));
 }
 
-TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_SmallSystem) {
+// SEQ тест с меньшей системой
+TEST(AfanasyevAItSeidelMethodPerfTests, SeqSmallSystem) {
   InType input = {50.0, 0.001, 500.0};
   AfanasyevAItSeidelMethodSEQ task(input);
 
@@ -32,11 +34,12 @@ TEST(AfanasyevAItSeidelMethodPerfTests, SEQ_SmallSystem) {
   EXPECT_TRUE(task.PostProcessing());
 
   auto output = task.GetOutput();
-  EXPECT_EQ(output.size(), 50u);
+  EXPECT_EQ(output.size(), static_cast<size_t>(50));
 }
 
-TEST(AfanasyevAItSeidelMethodPerfTests, MPI_Performance) {
-  int rank;
+// MPI тест производительности
+TEST(AfanasyevAItSeidelMethodPerfTests, MpiPerformance) {
+  int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   InType input = {100.0, 0.0001, 1000.0};
@@ -53,12 +56,13 @@ TEST(AfanasyevAItSeidelMethodPerfTests, MPI_Performance) {
 
   if (rank == 0) {
     auto output = task.GetOutput();
-    EXPECT_EQ(output.size(), 100u);
+    EXPECT_EQ(output.size(), static_cast<size_t>(100));
   }
 }
 
-TEST(AfanasyevAItSeidelMethodPerfTests, MPI_SmallSystem) {
-  int rank;
+// MPI тест с меньшей системой
+TEST(AfanasyevAItSeidelMethodPerfTests, MpiSmallSystem) {
+  int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   InType input = {50.0, 0.001, 500.0};
@@ -75,7 +79,7 @@ TEST(AfanasyevAItSeidelMethodPerfTests, MPI_SmallSystem) {
 
   if (rank == 0) {
     auto output = task.GetOutput();
-    EXPECT_EQ(output.size(), 50u);
+    EXPECT_EQ(output.size(), static_cast<size_t>(50));
   }
 }
 
