@@ -11,6 +11,79 @@
 
 namespace afanasyev_a_it_seidel_method {
 
+namespace {
+// Вспомогательная функция для вычисления разницы между векторами
+double CalculateMaxDiff(const std::vector<double> &a, const std::vector<double> &b) {
+  double max_diff = 0.0;
+  for (std::size_t i = 0; i < a.size(); ++i) {
+    max_diff = std::max(max_diff, std::abs(a[i] - b[i]));
+  }
+  return max_diff;
+}
+
+// Вспомогательная функция для копирования вектора
+void SafeVectorCopy(std::vector<double> &dest, const std::vector<double> &src) {
+  if (dest.size() == src.size()) {
+    for (std::size_t i = 0; i < src.size(); ++i) {
+      dest[i] = src[i];
+    }
+  }
+}
+
+// Вспомогательная функция для выполнения одной итерации
+bool PerformIteration(int system_size, int start_row, int end_row, const std::vector<std::vector<double>> &A,
+                      const std::vector<double> &b, std::vector<double> &local_x, std::vector<double> &global_x) {
+  // Вычисление локальных обновлений
+  for (int i = start_row; i < end_row; ++i) {
+    if (i >= system_size) {
+      break;
+    }
+
+    double sum = b[i];
+
+    for (int j = 0; j < i; ++j) {
+      sum -= A[i][j] * global_x[j];
+    }
+
+    for (int j = i + 1; j < system_size; ++j) {
+      sum -= A[i][j] * global_x[j];
+    }
+
+    local_x[i] = sum / A[i][i];
+  }
+
+  // Сбор всех обновлений
+  MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
+                MPI_DOUBLE, MPI_COMM_WORLD);
+
+  return true;
+}
+
+// Вспомогательная функция для проверки сходимости
+bool CheckConvergence(int rank, double max_diff, double epsilon, const std::vector<double> &global_x,
+                      std::vector<double> &x) {
+  if (rank == 0) {
+    if (max_diff < epsilon) {
+      int converged = 1;
+      MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
+      SafeVectorCopy(x, global_x);
+      return true;
+    }
+
+    int converged = 0;
+    MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  } else {
+    int converged = 0;
+    MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (converged != 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+}  // namespace
+
 AfanasyevAItSeidelMethodMPI::AfanasyevAItSeidelMethodMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
@@ -76,60 +149,19 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
   std::vector<double> global_x(system_size, 0.0);
 
   for (int iter = 0; iter < max_iterations_; ++iter) {
-    std::vector<double> prev_x(system_size);
-    for (int i = 0; i < system_size; ++i) {
-      prev_x[i] = global_x[i];
+    std::vector<double> prev_x = global_x;
+
+    if (!PerformIteration(system_size, start_row, end_row, A_, b_, local_x, global_x)) {
+      return false;
     }
 
-    for (int i = start_row; i < end_row; ++i) {
-      if (i >= system_size) {
-        break;
-      }
-
-      double sum = b_[i];
-
-      for (int j = 0; j < i; ++j) {
-        sum -= A_[i][j] * global_x[j];
-      }
-
-      for (int j = i + 1; j < system_size; ++j) {
-        sum -= A_[i][j] * global_x[j];
-      }
-
-      local_x[i] = sum / A_[i][i];
-    }
-
-    MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
-                  MPI_DOUBLE, MPI_COMM_WORLD);
-
-    if (rank == 0) {
-      double max_diff = 0.0;
-      for (int i = 0; i < system_size; ++i) {
-        double diff = std::abs(global_x[i] - prev_x[i]);
-        max_diff = std::max(diff, max_diff);
-      }
-
-      if (max_diff < epsilon_) {
-        int converged = 1;
-        MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        if (x_.size() == global_x.size()) {
-          for (std::size_t idx = 0; idx < global_x.size(); ++idx) {
-            x_[idx] = global_x[idx];
-          }
-        }
-        break;
-      }
-
-      int converged = 0;
-      MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    } else {
-      int converged = 0;
-      MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
-      if (converged != 0) {
+    if (CheckConvergence(rank, CalculateMaxDiff(global_x, prev_x), epsilon_, global_x, x_)) {
+      // Если сходимость достигнута, нужно собрать финальные данные
+      if (rank != 0) {
         MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
                       MPI_DOUBLE, MPI_COMM_WORLD);
-        break;
       }
+      break;
     }
   }
 
