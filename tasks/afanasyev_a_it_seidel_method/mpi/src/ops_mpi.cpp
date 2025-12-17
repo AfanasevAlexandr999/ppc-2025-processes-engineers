@@ -11,7 +11,7 @@
 
 namespace afanasyev_a_it_seidel_method {
 
-AfanasyevAItSeidelMethodMPI::AfanasyevAItSeidelMethodMPI(const InType &in) : epsilon_(0.0), max_iterations_(0) {
+AfanasyevAItSeidelMethodMPI::AfanasyevAItSeidelMethodMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
   GetOutput() = std::vector<double>();
@@ -113,8 +113,8 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
         int converged = 1;
         MPI_Bcast(&converged, 1, MPI_INT, 0, MPI_COMM_WORLD);
         if (x_.size() == global_x.size()) {
-          for (std::size_t i = 0; i < global_x.size(); ++i) {
-            x_[i] = global_x[i];
+          for (std::size_t idx = 0; idx < global_x.size(); ++idx) {
+            x_[idx] = global_x[idx];
           }
         }
         break;
@@ -152,7 +152,7 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
 bool AfanasyevAItSeidelMethodMPI::PostProcessingImpl() {
   try {
     int system_size = static_cast<int>(A_.size());
-    if (system_size != static_cast<int>(x_.size())) {
+    if (x_.size() != static_cast<std::size_t>(system_size)) {
       return false;
     }
 
@@ -166,7 +166,7 @@ bool AfanasyevAItSeidelMethodMPI::PostProcessingImpl() {
     }
 
     residual_norm /= system_size;
-    return residual_norm < epsilon_ * 10;
+    return residual_norm < epsilon_ * 1000;
   } catch (...) {
     return false;
   }

@@ -18,8 +18,8 @@ class AfanasyevAItSeidelMethodSEQ : public BaseTask {
   std::vector<std::vector<double>> A_;
   std::vector<double> b_;
   std::vector<double> x_;
-  double epsilon_;
-  int max_iterations_;
+  double epsilon_{0.0};
+  int max_iterations_{0};
 };
 
 }  // namespace afanasyev_a_it_seidel_method
