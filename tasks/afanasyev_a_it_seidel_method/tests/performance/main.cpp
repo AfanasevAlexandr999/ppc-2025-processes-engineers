@@ -9,9 +9,8 @@
 
 namespace afanasyev_a_it_seidel_method {
 
-// SEQ тест производительности
 TEST(AfanasyevAItSeidelMethodPerfTests, SeqPerformance) {
-  InType input = {100.0, 0.001, 5000.0};  // увеличенное число итераций
+  InType input = {100.0, 0.001, 5000.0};
   AfanasyevAItSeidelMethodSEQ task(input);
 
   EXPECT_TRUE(task.Validation());
@@ -24,9 +23,8 @@ TEST(AfanasyevAItSeidelMethodPerfTests, SeqPerformance) {
   EXPECT_EQ(output.size(), static_cast<std::size_t>(100));
 }
 
-// SEQ тест с меньшей системой
 TEST(AfanasyevAItSeidelMethodPerfTests, SeqSmallSystem) {
-  InType input = {50.0, 0.001, 2000.0};  // увеличенное число итераций
+  InType input = {50.0, 0.001, 2000.0};
   AfanasyevAItSeidelMethodSEQ task(input);
 
   EXPECT_TRUE(task.Validation());
@@ -39,12 +37,11 @@ TEST(AfanasyevAItSeidelMethodPerfTests, SeqSmallSystem) {
   EXPECT_EQ(output.size(), static_cast<std::size_t>(50));
 }
 
-// MPI тест производительности
 TEST(AfanasyevAItSeidelMethodPerfTests, MpiPerformance) {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  InType input = {100.0, 0.001, 5000.0};  // увеличенное число итераций
+  InType input = {100.0, 0.001, 5000.0};
   AfanasyevAItSeidelMethodMPI task(input);
 
   EXPECT_TRUE(task.Validation());
@@ -62,12 +59,11 @@ TEST(AfanasyevAItSeidelMethodPerfTests, MpiPerformance) {
   }
 }
 
-// MPI тест с меньшей системой
 TEST(AfanasyevAItSeidelMethodPerfTests, MpiSmallSystem) {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  InType input = {50.0, 0.001, 2000.0};  // увеличенное число итераций
+  InType input = {50.0, 0.001, 2000.0};
   AfanasyevAItSeidelMethodMPI task(input);
 
   EXPECT_TRUE(task.Validation());

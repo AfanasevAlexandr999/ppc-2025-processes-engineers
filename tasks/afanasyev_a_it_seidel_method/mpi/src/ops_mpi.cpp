@@ -12,7 +12,7 @@
 namespace afanasyev_a_it_seidel_method {
 
 namespace {
-// Вспомогательная функция для вычисления разницы между векторами
+
 double CalculateMaxDiff(const std::vector<double> &a, const std::vector<double> &b) {
   double max_diff = 0.0;
   for (std::size_t i = 0; i < a.size(); ++i) {
@@ -21,7 +21,6 @@ double CalculateMaxDiff(const std::vector<double> &a, const std::vector<double> 
   return max_diff;
 }
 
-// Вспомогательная функция для копирования вектора
 void SafeVectorCopy(std::vector<double> &dest, const std::vector<double> &src) {
   if (dest.size() == src.size()) {
     for (std::size_t i = 0; i < src.size(); ++i) {
@@ -30,10 +29,8 @@ void SafeVectorCopy(std::vector<double> &dest, const std::vector<double> &src) {
   }
 }
 
-// Вспомогательная функция для выполнения одной итерации
-bool PerformIteration(int system_size, int start_row, int end_row, const std::vector<std::vector<double>> &A,
+bool PerformIteration(int system_size, int start_row, int end_row, const std::vector<std::vector<double>> &a,
                       const std::vector<double> &b, std::vector<double> &local_x, std::vector<double> &global_x) {
-  // Вычисление локальных обновлений
   for (int i = start_row; i < end_row; ++i) {
     if (i >= system_size) {
       break;
@@ -42,24 +39,22 @@ bool PerformIteration(int system_size, int start_row, int end_row, const std::ve
     double sum = b[i];
 
     for (int j = 0; j < i; ++j) {
-      sum -= A[i][j] * global_x[j];
+      sum -= a[i][j] * global_x[j];
     }
 
     for (int j = i + 1; j < system_size; ++j) {
-      sum -= A[i][j] * global_x[j];
+      sum -= a[i][j] * global_x[j];
     }
 
-    local_x[i] = sum / A[i][i];
+    local_x[i] = sum / a[i][i];
   }
 
-  // Сбор всех обновлений
   MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
                 MPI_DOUBLE, MPI_COMM_WORLD);
 
   return true;
 }
 
-// Вспомогательная функция для проверки сходимости
 bool CheckConvergence(int rank, double max_diff, double epsilon, const std::vector<double> &global_x,
                       std::vector<double> &x) {
   if (rank == 0) {
@@ -156,7 +151,6 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
     }
 
     if (CheckConvergence(rank, CalculateMaxDiff(global_x, prev_x), epsilon_, global_x, x_)) {
-      // Если сходимость достигнута, нужно собрать финальные данные
       if (rank != 0) {
         MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
                       MPI_DOUBLE, MPI_COMM_WORLD);

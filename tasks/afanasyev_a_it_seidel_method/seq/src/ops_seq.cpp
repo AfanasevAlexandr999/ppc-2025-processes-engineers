@@ -69,7 +69,6 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
       return false;
     }
 
-    // Простой алгоритм Зейделя
     for (int iter = 0; iter < max_iterations_; ++iter) {
       double max_diff = 0.0;
 
@@ -77,12 +76,10 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
         double old_x = x_[i];
         double sum = b_[i];
 
-        // Используем уже обновленные значения
         for (int j = 0; j < i; ++j) {
           sum -= A_[i][j] * x_[j];
         }
 
-        // Используем старые значения для еще не обновленных
         for (int j = i + 1; j < system_size; ++j) {
           sum -= A_[i][j] * x_[j];
         }
@@ -96,7 +93,6 @@ bool AfanasyevAItSeidelMethodSEQ::RunImpl() {
       }
     }
 
-    // Безопасное копирование результата
     OutType output;
     output.reserve(x_.size());
     for (const auto &val : x_) {

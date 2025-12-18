@@ -9,7 +9,6 @@
 
 namespace afanasyev_a_it_seidel_method {
 
-// Тесты для последовательной версии
 TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSeqSmallSystem) {
   InType input = {3.0, 0.001, 100.0};
   AfanasyevAItSeidelMethodSEQ task(input);
@@ -49,7 +48,6 @@ TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSeqLargeSystem) {
   EXPECT_EQ(output.size(), static_cast<std::size_t>(7));
 }
 
-// Тесты для MPI версии
 TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMpiSmallSystem) {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
