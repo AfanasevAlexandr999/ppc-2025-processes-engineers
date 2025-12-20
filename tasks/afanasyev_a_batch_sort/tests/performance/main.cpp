@@ -7,7 +7,7 @@
 
 namespace afanasyev_a_batch_sort {
 
-class ExampleRunPerfTestProcesses3 : public ppc::util::BaseRunPerfTests<InType, OutType> {
+class AfanasyevABatchSortPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
   const int kCount_ = 100;
   InType input_data_{};
 
@@ -24,7 +24,7 @@ class ExampleRunPerfTestProcesses3 : public ppc::util::BaseRunPerfTests<InType, 
   }
 };
 
-TEST_P(ExampleRunPerfTestProcesses3, RunPerfModes) {
+TEST_P(AfanasyevABatchSortPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
@@ -33,8 +33,8 @@ const auto kAllPerfTasks =
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = ExampleRunPerfTestProcesses3::CustomPerfTestName;
+const auto kPerfTestName = AfanasyevABatchSortPerfTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ExampleRunPerfTestProcesses3, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RunModeTests, AfanasyevABatchSortPerfTests, kGtestValues, kPerfTestName);
 
 }  // namespace afanasyev_a_batch_sort
