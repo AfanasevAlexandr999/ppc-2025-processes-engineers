@@ -1,15 +1,9 @@
 #include <gtest/gtest.h>
-#include <stb/stb_image.h>
 
 #include <algorithm>
-#include <array>
-#include <cstddef>
-#include <cstdint>
 #include <numeric>
-#include <stdexcept>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "afanasyev_a_batch_sort/common/include/common.hpp"
@@ -28,31 +22,12 @@ class AfanasyevABatchSortFuncTests : public ppc::util::BaseRunFuncTests<InType, 
 
  protected:
   void SetUp() override {
-    int width = -1;
-    int height = -1;
-    int channels = -1;
-    std::vector<uint8_t> img;
-    // Read image in RGB to ensure consistent channel count
-    {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_afanasyev_a_batch_sort, "pic.jpg");
-      auto *data = stbi_load(abs_path.c_str(), &width, &height, &channels, STBI_rgb);
-      if (data == nullptr) {
-        throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
-      }
-      channels = STBI_rgb;
-      img = std::vector<uint8_t>(data, data + (static_cast<ptrdiff_t>(width * height * channels)));
-      stbi_image_free(data);
-      if (std::cmp_not_equal(width, height)) {
-        throw std::runtime_error("width != height: ");
-      }
-    }
-
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
-    input_data_ = width - height + std::min(std::accumulate(img.begin(), img.end(), 0), channels);
+    input_data_ = std::get<0>(params);
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return (input_data_ == output_data);
+    return output_data == input_data_;
   }
 
   InType GetTestInputData() final {
@@ -65,21 +40,21 @@ class AfanasyevABatchSortFuncTests : public ppc::util::BaseRunFuncTests<InType, 
 
 namespace {
 
-TEST_P(AfanasyevABatchSortFuncTests, MatmulFromPic) {
+TEST_P(AfanasyevABatchSortFuncTests, RadixBatcherSortTest) {
   ExecuteTest(GetParam());
 }
 
 const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3"), std::make_tuple(5, "5"), std::make_tuple(7, "7")};
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<AfanasyevABatchSortMPI, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_batch_sort),
-                   ppc::util::AddFuncTask<AfanasyevABatchSortSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_batch_sort));
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<AfanasyevABatchSortMPI, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_batch_sort),
+    ppc::util::AddFuncTask<AfanasyevABatchSortSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_batch_sort));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
 const auto kPerfTestName = AfanasyevABatchSortFuncTests::PrintFuncTestName<AfanasyevABatchSortFuncTests>;
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, AfanasyevABatchSortFuncTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RadixBatcherTests, AfanasyevABatchSortFuncTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 

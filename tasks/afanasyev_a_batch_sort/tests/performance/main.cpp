@@ -8,6 +8,7 @@
 namespace afanasyev_a_batch_sort {
 
 class AfanasyevABatchSortPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
+ protected:
   const int kCount_ = 100;
   InType input_data_{};
 
@@ -16,7 +17,7 @@ class AfanasyevABatchSortPerfTests : public ppc::util::BaseRunPerfTests<InType, 
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
+    return output_data == input_data_;
   }
 
   InType GetTestInputData() final {
@@ -28,8 +29,8 @@ TEST_P(AfanasyevABatchSortPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, AfanasyevABatchSortMPI, AfanasyevABatchSortSEQ>(PPC_SETTINGS_afanasyev_a_batch_sort);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, AfanasyevABatchSortMPI, AfanasyevABatchSortSEQ>(
+    PPC_SETTINGS_afanasyev_a_batch_sort);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

@@ -1,5 +1,6 @@
 #include "afanasyev_a_batch_sort/seq/include/ops_seq.hpp"
 
+#include <algorithm>
 #include <numeric>
 #include <vector>
 
@@ -8,6 +9,54 @@
 
 namespace afanasyev_a_batch_sort {
 
+static void RadixSort(std::vector<InType> &data) {
+  if (data.empty()) {
+    return;
+  }
+
+  InType max_val = *std::max_element(data.begin(), data.end());
+  for (InType exp = 1; max_val / exp > 0; exp *= 10) {
+    std::vector<InType> output(data.size());
+    int count[10] = {0};
+
+    for (auto num : data) {
+      count[(num / exp) % 10]++;
+    }
+    for (int i = 1; i < 10; i++) {
+      count[i] += count[i - 1];
+    }
+    for (int i = data.size() - 1; i >= 0; i--) {
+      int digit = (data[i] / exp) % 10;
+      output[count[digit] - 1] = data[i];
+      count[digit]--;
+    }
+    data = output;
+  }
+}
+
+static std::vector<InType> BatcherMerge(const std::vector<InType> &a, const std::vector<InType> &b) {
+  std::vector<InType> merged(a.size() + b.size());
+  std::merge(a.begin(), a.end(), b.begin(), b.end(), merged.begin());
+
+  bool sorted = false;
+  while (!sorted) {
+    sorted = true;
+    for (size_t i = 0; i + 1 < merged.size(); i += 2) {
+      if (merged[i] > merged[i + 1]) {
+        std::swap(merged[i], merged[i + 1]);
+        sorted = false;
+      }
+    }
+    for (size_t i = 1; i + 1 < merged.size(); i += 2) {
+      if (merged[i] > merged[i + 1]) {
+        std::swap(merged[i], merged[i + 1]);
+        sorted = false;
+      }
+    }
+  }
+  return merged;
+}
+
 AfanasyevABatchSortSEQ::AfanasyevABatchSortSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
@@ -15,45 +64,29 @@ AfanasyevABatchSortSEQ::AfanasyevABatchSortSEQ(const InType &in) {
 }
 
 bool AfanasyevABatchSortSEQ::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
+  return GetInput() > 0;
 }
 
 bool AfanasyevABatchSortSEQ::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 bool AfanasyevABatchSortSEQ::RunImpl() {
-  if (GetInput() == 0) {
-    return false;
+  int n = GetInput();
+  std::vector<InType> data(n);
+  for (int i = 0; i < n; i++) {
+    data[i] = rand() % 1000;
   }
 
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
-      }
-    }
-  }
+  RadixSort(data);
 
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
+  std::vector<InType> sorted = BatcherMerge(data, std::vector<InType>{});
 
-  int counter = 0;
-  for (int i = 0; i < num_threads; i++) {
-    counter++;
-  }
-
-  if (counter != 0) {
-    GetOutput() /= counter;
-  }
-  return GetOutput() > 0;
+  GetOutput() = static_cast<OutType>(sorted.size());
+  return true;
 }
 
 bool AfanasyevABatchSortSEQ::PostProcessingImpl() {
-  GetOutput() -= GetInput();
   return GetOutput() > 0;
 }
 
