@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "afanasyev_a_batch_sort/common/include/common.hpp"
@@ -18,16 +19,16 @@ void RadixSort(std::vector<InType> &data) {
     return;
   }
 
-  const InType max_val = *std::max_element(data.begin(), data.end());
+  const InType max_val = *std::ranges::max_element(data);
   std::vector<InType> output(data.size());
 
   for (InType exp = 1; max_val / exp > 0; exp *= 10) {
     std::array<std::size_t, 10> count{};
-    count.fill(0);
 
     for (const InType num : data) {
-      const std::size_t digit = static_cast<std::size_t>((num / exp) % 10);
-      ++count[digit];
+      const auto digit = static_cast<std::size_t>((num / exp) % 10);
+      // Используем прямой доступ, так как digit всегда в пределах 0-9
+      count[digit]++;
     }
 
     for (std::size_t i = 1; i < count.size(); ++i) {
@@ -35,23 +36,26 @@ void RadixSort(std::vector<InType> &data) {
     }
 
     for (std::size_t i = data.size(); i-- > 0;) {
-      const std::size_t digit = static_cast<std::size_t>((data[i] / exp) % 10);
+      const auto digit = static_cast<std::size_t>((data[i] / exp) % 10);
+      // Используем прямой доступ, так как индексы гарантированно в пределах
       output[count[digit] - 1] = data[i];
-      --count[digit];
+      count[digit]--;
     }
 
-    data = output;
+    data = std::move(output);
+    output.resize(data.size());
   }
 }
 
 std::vector<InType> BatcherMerge(const std::vector<InType> &a, const std::vector<InType> &b) {
   std::vector<InType> merged(a.size() + b.size());
-  std::merge(a.begin(), a.end(), b.begin(), b.end(), merged.begin());
+  std::ranges::merge(a, b, merged.begin());
   return merged;
 }
 
 std::vector<InType> GenerateData(std::size_t n) {
-  std::mt19937 gen(42);
+  std::random_device rd;
+  std::mt19937 gen(rd());
   std::uniform_int_distribution<InType> dist(0, 1000);
 
   std::vector<InType> data(n);
@@ -83,15 +87,18 @@ bool AfanasyevABatchSortMPI::RunImpl() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  const std::size_t n = static_cast<std::size_t>(GetInput());
+  const auto n = static_cast<std::size_t>(GetInput());
 
   std::vector<InType> global_data;
   if (rank == 0) {
     global_data = GenerateData(n);
   }
 
+  // Рассчитываем размеры для каждого процесса
   const std::size_t base = n / static_cast<std::size_t>(size);
   const std::size_t rem = n % static_cast<std::size_t>(size);
+
+  // Безопасное сравнение через static_cast
   const std::size_t local_size = base + (static_cast<std::size_t>(rank) < rem ? 1U : 0U);
 
   std::vector<int> counts(size);
@@ -99,6 +106,7 @@ bool AfanasyevABatchSortMPI::RunImpl() {
 
   std::size_t offset = 0;
   for (int i = 0; i < size; ++i) {
+    // Безопасное сравнение через static_cast
     const std::size_t sz = base + (static_cast<std::size_t>(i) < rem ? 1U : 0U);
     counts[i] = static_cast<int>(sz);
     displs[i] = static_cast<int>(offset);
@@ -107,11 +115,15 @@ bool AfanasyevABatchSortMPI::RunImpl() {
 
   std::vector<InType> local_data(local_size);
 
-  MPI_Scatterv(global_data.data(), counts.data(), displs.data(), MPI_INT, local_data.data(),
-               static_cast<int>(local_size), MPI_INT, 0, MPI_COMM_WORLD);
+  // Используем правильный MPI тип для InType (int)
+  MPI_Datatype mpi_in_type = MPI_INT;
+
+  MPI_Scatterv(global_data.data(), counts.data(), displs.data(), mpi_in_type, local_data.data(),
+               static_cast<int>(local_size), mpi_in_type, 0, MPI_COMM_WORLD);
 
   RadixSort(local_data);
 
+  // Батчеровское слияние
   int step = 1;
   while (step < size) {
     if ((rank / step) % 2 == 0) {
@@ -122,7 +134,7 @@ bool AfanasyevABatchSortMPI::RunImpl() {
 
         std::vector<InType> recv_data(static_cast<std::size_t>(recv_size));
 
-        MPI_Recv(recv_data.data(), recv_size, MPI_INT, partner, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(recv_data.data(), recv_size, mpi_in_type, partner, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         local_data = BatcherMerge(local_data, recv_data);
       }
@@ -131,7 +143,7 @@ bool AfanasyevABatchSortMPI::RunImpl() {
       const int send_size = static_cast<int>(local_data.size());
 
       MPI_Send(&send_size, 1, MPI_INT, partner, 0, MPI_COMM_WORLD);
-      MPI_Send(local_data.data(), send_size, MPI_INT, partner, 1, MPI_COMM_WORLD);
+      MPI_Send(local_data.data(), send_size, mpi_in_type, partner, 1, MPI_COMM_WORLD);
       break;
     }
     step *= 2;
