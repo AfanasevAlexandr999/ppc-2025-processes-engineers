@@ -24,26 +24,33 @@ void RadixSort(std::vector<InType> &data) {
 
   for (InType exp = 1; max_val / exp > 0; exp *= 10) {
     std::array<std::size_t, 10> count{};
+    count.fill(0);
 
+    // Подсчет цифр
     for (const InType num : data) {
-      const auto digit = static_cast<std::size_t>((num / exp) % 10);
-      // Используем прямой доступ, так как digit всегда в пределах 0-9
-      count[digit]++;
+      const std::size_t digit = static_cast<std::size_t>((num / exp) % 10);
+      // Используем прямую индексацию, так как digit гарантированно 0-9
+      if (digit < 10) {
+        count[digit]++;
+      }
     }
 
-    for (std::size_t i = 1; i < count.size(); ++i) {
+    // Префиксная сумма
+    for (std::size_t i = 1; i < 10; ++i) {
       count[i] += count[i - 1];
     }
 
+    // Размещение элементов
     for (std::size_t i = data.size(); i-- > 0;) {
-      const auto digit = static_cast<std::size_t>((data[i] / exp) % 10);
-      // Используем прямой доступ, так как индексы гарантированно в пределах
-      output[count[digit] - 1] = data[i];
-      count[digit]--;
+      const std::size_t digit = static_cast<std::size_t>((data[i] / exp) % 10);
+      if (digit < 10 && count[digit] > 0) {
+        output[count[digit] - 1] = data[i];
+        count[digit]--;
+      }
     }
 
-    data = std::move(output);
-    output.resize(data.size());
+    // Копируем результат обратно
+    std::ranges::copy(output, data.begin());
   }
 }
 
@@ -87,27 +94,26 @@ bool AfanasyevABatchSortMPI::RunImpl() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  const auto n = static_cast<std::size_t>(GetInput());
+  const std::size_t n = static_cast<std::size_t>(GetInput());
 
   std::vector<InType> global_data;
   if (rank == 0) {
     global_data = GenerateData(n);
   }
 
-  // Рассчитываем размеры для каждого процесса
   const std::size_t base = n / static_cast<std::size_t>(size);
   const std::size_t rem = n % static_cast<std::size_t>(size);
 
-  // Безопасное сравнение через static_cast
-  const std::size_t local_size = base + (static_cast<std::size_t>(rank) < rem ? 1U : 0U);
+  // Безопасное сравнение знаковых и беззнаковых
+  const std::size_t local_size = base + (rank < static_cast<int>(rem) ? 1U : 0U);
 
   std::vector<int> counts(size);
   std::vector<int> displs(size);
 
   std::size_t offset = 0;
   for (int i = 0; i < size; ++i) {
-    // Безопасное сравнение через static_cast
-    const std::size_t sz = base + (static_cast<std::size_t>(i) < rem ? 1U : 0U);
+    // Безопасное сравнение знаковых и беззнаковых
+    const std::size_t sz = base + (i < static_cast<int>(rem) ? 1U : 0U);
     counts[i] = static_cast<int>(sz);
     displs[i] = static_cast<int>(offset);
     offset += sz;
@@ -115,7 +121,6 @@ bool AfanasyevABatchSortMPI::RunImpl() {
 
   std::vector<InType> local_data(local_size);
 
-  // Используем правильный MPI тип для InType (int)
   MPI_Datatype mpi_in_type = MPI_INT;
 
   MPI_Scatterv(global_data.data(), counts.data(), displs.data(), mpi_in_type, local_data.data(),
@@ -123,7 +128,6 @@ bool AfanasyevABatchSortMPI::RunImpl() {
 
   RadixSort(local_data);
 
-  // Батчеровское слияние
   int step = 1;
   while (step < size) {
     if ((rank / step) % 2 == 0) {
