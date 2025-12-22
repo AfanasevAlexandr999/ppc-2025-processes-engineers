@@ -3,62 +3,65 @@
 #include <mpi.h>
 
 #include <algorithm>
-#include <cstdlib>
-#include <numeric>
+#include <array>
+#include <cstddef>
+#include <random>
 #include <vector>
 
 #include "afanasyev_a_batch_sort/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace afanasyev_a_batch_sort {
+namespace {
 
-static void RadixSort(std::vector<InType> &data) {
+void RadixSort(std::vector<InType> &data) {
   if (data.empty()) {
     return;
   }
 
-  InType max_val = *std::max_element(data.begin(), data.end());
-  for (InType exp = 1; max_val / exp > 0; exp *= 10) {
-    std::vector<InType> output(data.size());
-    int count[10] = {0};
+  const InType max_val = *std::max_element(data.begin(), data.end());
+  std::vector<InType> output(data.size());
 
-    for (auto num : data) {
-      count[(num / exp) % 10]++;
+  for (InType exp = 1; max_val / exp > 0; exp *= 10) {
+    std::array<std::size_t, 10> count{};
+    count.fill(0);
+
+    for (const InType num : data) {
+      const std::size_t digit = static_cast<std::size_t>((num / exp) % 10);
+      ++count[digit];
     }
-    for (int i = 1; i < 10; i++) {
+
+    for (std::size_t i = 1; i < count.size(); ++i) {
       count[i] += count[i - 1];
     }
-    for (int i = data.size() - 1; i >= 0; i--) {
-      int digit = (data[i] / exp) % 10;
+
+    for (std::size_t i = data.size(); i-- > 0;) {
+      const std::size_t digit = static_cast<std::size_t>((data[i] / exp) % 10);
       output[count[digit] - 1] = data[i];
-      count[digit]--;
+      --count[digit];
     }
+
     data = output;
   }
 }
 
-static std::vector<InType> BatcherMerge(const std::vector<InType> &a, const std::vector<InType> &b) {
+std::vector<InType> BatcherMerge(const std::vector<InType> &a, const std::vector<InType> &b) {
   std::vector<InType> merged(a.size() + b.size());
   std::merge(a.begin(), a.end(), b.begin(), b.end(), merged.begin());
-
-  bool sorted = false;
-  while (!sorted) {
-    sorted = true;
-    for (size_t i = 0; i + 1 < merged.size(); i += 2) {
-      if (merged[i] > merged[i + 1]) {
-        std::swap(merged[i], merged[i + 1]);
-        sorted = false;
-      }
-    }
-    for (size_t i = 1; i + 1 < merged.size(); i += 2) {
-      if (merged[i] > merged[i + 1]) {
-        std::swap(merged[i], merged[i + 1]);
-        sorted = false;
-      }
-    }
-  }
   return merged;
 }
+
+std::vector<InType> GenerateData(std::size_t n) {
+  std::mt19937 gen(42);
+  std::uniform_int_distribution<InType> dist(0, 1000);
+
+  std::vector<InType> data(n);
+  for (auto &v : data) {
+    v = dist(gen);
+  }
+  return data;
+}
+
+}  // namespace
 
 AfanasyevABatchSortMPI::AfanasyevABatchSortMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
@@ -75,62 +78,73 @@ bool AfanasyevABatchSortMPI::PreProcessingImpl() {
 }
 
 bool AfanasyevABatchSortMPI::RunImpl() {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  int n = GetInput();
-  std::vector<InType> data;
+  const std::size_t n = static_cast<std::size_t>(GetInput());
+
+  std::vector<InType> global_data;
   if (rank == 0) {
-    data.resize(n);
-    for (int i = 0; i < n; i++) {
-      data[i] = rand() % 1000;
-    }
+    global_data = GenerateData(n);
   }
 
-  int base_local_size = n / size;
-  int remainder = n % size;
-  int local_size = base_local_size + (rank < remainder ? 1 : 0);
-  std::vector<InType> local_data(local_size);
+  const std::size_t base = n / static_cast<std::size_t>(size);
+  const std::size_t rem = n % static_cast<std::size_t>(size);
+  const std::size_t local_size = base + (static_cast<std::size_t>(rank) < rem ? 1U : 0U);
 
   std::vector<int> counts(size);
   std::vector<int> displs(size);
-  for (int i = 0; i < size; i++) {
-    counts[i] = base_local_size + (i < remainder ? 1 : 0);
-    displs[i] = (i == 0) ? 0 : displs[i - 1] + counts[i - 1];
+
+  std::size_t offset = 0;
+  for (int i = 0; i < size; ++i) {
+    const std::size_t sz = base + (static_cast<std::size_t>(i) < rem ? 1U : 0U);
+    counts[i] = static_cast<int>(sz);
+    displs[i] = static_cast<int>(offset);
+    offset += sz;
   }
 
-  MPI_Scatterv(data.data(), counts.data(), displs.data(), MPI_INT, local_data.data(), local_size, MPI_INT, 0,
-               MPI_COMM_WORLD);
+  std::vector<InType> local_data(local_size);
+
+  MPI_Scatterv(global_data.data(), counts.data(), displs.data(), MPI_INT, local_data.data(),
+               static_cast<int>(local_size), MPI_INT, 0, MPI_COMM_WORLD);
 
   RadixSort(local_data);
 
   int step = 1;
   while (step < size) {
     if ((rank / step) % 2 == 0) {
-      int partner = rank + step;
+      const int partner = rank + step;
       if (partner < size) {
-        int recv_size;
+        int recv_size = 0;
         MPI_Recv(&recv_size, 1, MPI_INT, partner, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        std::vector<InType> recv_data(recv_size);
+
+        std::vector<InType> recv_data(static_cast<std::size_t>(recv_size));
+
         MPI_Recv(recv_data.data(), recv_size, MPI_INT, partner, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
         local_data = BatcherMerge(local_data, recv_data);
       }
     } else {
-      int partner = rank - step;
-      int send_size = local_data.size();
+      const int partner = rank - step;
+      const int send_size = static_cast<int>(local_data.size());
+
       MPI_Send(&send_size, 1, MPI_INT, partner, 0, MPI_COMM_WORLD);
       MPI_Send(local_data.data(), send_size, MPI_INT, partner, 1, MPI_COMM_WORLD);
-      local_data.clear();
+      break;
     }
     step *= 2;
   }
 
-  int final_size = (rank == 0) ? static_cast<int>(local_data.size()) : 0;
-  MPI_Bcast(&final_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  GetOutput() = final_size;
+  int result = 0;
+  if (rank == 0) {
+    result = static_cast<int>(local_data.size());
+  }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Bcast(&result, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  GetOutput() = result;
+
   return true;
 }
 

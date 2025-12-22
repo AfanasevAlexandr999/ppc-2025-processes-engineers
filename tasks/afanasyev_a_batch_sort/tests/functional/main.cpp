@@ -1,10 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
-#include <numeric>
+#include <array>
+#include <cstddef>
 #include <string>
 #include <tuple>
-#include <vector>
 
 #include "afanasyev_a_batch_sort/common/include/common.hpp"
 #include "afanasyev_a_batch_sort/mpi/include/ops_mpi.hpp"
