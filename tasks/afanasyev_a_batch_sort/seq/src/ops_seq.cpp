@@ -4,7 +4,6 @@
 #include <array>
 #include <cstddef>
 #include <random>
-#include <utility>
 #include <vector>
 
 #include "afanasyev_a_batch_sort/common/include/common.hpp"
@@ -22,28 +21,27 @@ void RadixSort(std::vector<InType> &data) {
 
   for (InType exp = 1; max_val / exp > 0; exp *= 10) {
     std::array<std::size_t, 10> count{};
-    count.fill(0);
 
-    // Подсчет цифр
+    // Подсчет цифр с использованием безопасного доступа
     for (const InType value : data) {
-      const std::size_t digit = static_cast<std::size_t>((value / exp) % 10);
-      // Используем прямую индексацию, так как digit гарантированно 0-9
-      if (digit < 10) {
-        count[digit]++;
+      const auto digit = static_cast<std::size_t>((value / exp) % 10);
+      if (digit < count.size()) {
+        ++count.at(digit);
       }
     }
 
-    // Префиксная сумма
-    for (std::size_t i = 1; i < 10; ++i) {
-      count[i] += count[i - 1];
+    // Префиксная сумма с безопасным доступом
+    for (std::size_t i = 1; i < count.size(); ++i) {
+      count.at(i) += count.at(i - 1);
     }
 
-    // Размещение элементов
+    // Размещение элементов с безопасным доступом
     for (std::size_t i = data.size(); i-- > 0;) {
-      const std::size_t digit = static_cast<std::size_t>((data[i] / exp) % 10);
-      if (digit < 10 && count[digit] > 0) {
-        output[count[digit] - 1] = data[i];
-        count[digit]--;
+      const auto digit = static_cast<std::size_t>((data.at(i) / exp) % 10);
+      if (digit < count.size() && count.at(digit) > 0) {
+        const std::size_t index = count.at(digit) - 1;
+        output.at(index) = data.at(i);
+        --count.at(digit);
       }
     }
 
@@ -81,7 +79,7 @@ bool AfanasyevABatchSortSEQ::PreProcessingImpl() {
 }
 
 bool AfanasyevABatchSortSEQ::RunImpl() {
-  const std::size_t n = static_cast<std::size_t>(GetInput());
+  const auto n = static_cast<std::size_t>(GetInput());
 
   std::vector<InType> data = GenerateData(n);
   RadixSort(data);

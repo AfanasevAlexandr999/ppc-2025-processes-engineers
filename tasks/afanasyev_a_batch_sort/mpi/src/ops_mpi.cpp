@@ -6,7 +6,6 @@
 #include <array>
 #include <cstddef>
 #include <random>
-#include <utility>
 #include <vector>
 
 #include "afanasyev_a_batch_sort/common/include/common.hpp"
@@ -24,28 +23,27 @@ void RadixSort(std::vector<InType> &data) {
 
   for (InType exp = 1; max_val / exp > 0; exp *= 10) {
     std::array<std::size_t, 10> count{};
-    count.fill(0);
 
-    // Подсчет цифр
+    // Подсчет цифр с использованием безопасного доступа
     for (const InType num : data) {
-      const std::size_t digit = static_cast<std::size_t>((num / exp) % 10);
-      // Используем прямую индексацию, так как digit гарантированно 0-9
-      if (digit < 10) {
-        count[digit]++;
+      const auto digit = static_cast<std::size_t>((num / exp) % 10);
+      if (digit < count.size()) {
+        ++count.at(digit);
       }
     }
 
-    // Префиксная сумма
-    for (std::size_t i = 1; i < 10; ++i) {
-      count[i] += count[i - 1];
+    // Префиксная сумма с безопасным доступом
+    for (std::size_t i = 1; i < count.size(); ++i) {
+      count.at(i) += count.at(i - 1);
     }
 
-    // Размещение элементов
+    // Размещение элементов с безопасным доступом
     for (std::size_t i = data.size(); i-- > 0;) {
-      const std::size_t digit = static_cast<std::size_t>((data[i] / exp) % 10);
-      if (digit < 10 && count[digit] > 0) {
-        output[count[digit] - 1] = data[i];
-        count[digit]--;
+      const auto digit = static_cast<std::size_t>((data.at(i) / exp) % 10);
+      if (digit < count.size() && count.at(digit) > 0) {
+        const std::size_t index = count.at(digit) - 1;
+        output.at(index) = data.at(i);
+        --count.at(digit);
       }
     }
 
@@ -94,7 +92,7 @@ bool AfanasyevABatchSortMPI::RunImpl() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  const std::size_t n = static_cast<std::size_t>(GetInput());
+  const auto n = static_cast<std::size_t>(GetInput());
 
   std::vector<InType> global_data;
   if (rank == 0) {
@@ -104,18 +102,18 @@ bool AfanasyevABatchSortMPI::RunImpl() {
   const std::size_t base = n / static_cast<std::size_t>(size);
   const std::size_t rem = n % static_cast<std::size_t>(size);
 
-  // Безопасное сравнение знаковых и беззнаковых
-  const std::size_t local_size = base + (rank < static_cast<int>(rem) ? 1U : 0U);
+  // Используем std::cmp_less для безопасного сравнения знаковых и беззнаковых
+  const std::size_t local_size = base + (std::cmp_less(rank, static_cast<int>(rem)) ? 1U : 0U);
 
   std::vector<int> counts(size);
   std::vector<int> displs(size);
 
   std::size_t offset = 0;
   for (int i = 0; i < size; ++i) {
-    // Безопасное сравнение знаковых и беззнаковых
-    const std::size_t sz = base + (i < static_cast<int>(rem) ? 1U : 0U);
-    counts[i] = static_cast<int>(sz);
-    displs[i] = static_cast<int>(offset);
+    // Используем std::cmp_less для безопасного сравнения
+    const std::size_t sz = base + (std::cmp_less(i, static_cast<int>(rem)) ? 1U : 0U);
+    counts.at(i) = static_cast<int>(sz);
+    displs.at(i) = static_cast<int>(offset);
     offset += sz;
   }
 
