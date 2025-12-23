@@ -59,10 +59,10 @@ bool PerformIteration(int system_size, int start_row, int end_row, const std::ve
 
   std::vector<int> sendcounts(size);
   std::vector<int> displs(size);
-  for (int r = 0; r < size; ++r) {
-    int cnt = rows_per_process + (r < remainder ? 1 : 0);
-    sendcounts[r] = cnt;
-    displs[r] = (r * rows_per_process) + std::min(r, remainder);
+  for (int proc = 0; proc < size; ++proc) {
+    int cnt = rows_per_process + (proc < remainder ? 1 : 0);
+    sendcounts[proc] = cnt;
+    displs[proc] = (proc * rows_per_process) + std::min(proc, remainder);
   }
 
   int sendcount = end_row - start_row;

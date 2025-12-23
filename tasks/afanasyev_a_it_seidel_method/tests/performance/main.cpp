@@ -1,17 +1,26 @@
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <random>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
 #include "afanasyev_a_it_seidel_method/mpi/include/ops_mpi.hpp"
 #include "afanasyev_a_it_seidel_method/seq/include/ops_seq.hpp"
+#include "performance/include/performance.hpp"
+#include "task/include/task.hpp"
 #include "util/include/perf_test_util.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 
 class AfanasyevAItSeidelMethodPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:
-  const int kSystemSize = 10000;
-  const double kEpsilon = 1e-6;
-  const int kMaxIterations = 3000000;
+  static constexpr int kSystemSize = 10000;
+  static constexpr double kEpsilon = 1e-6;
+  static constexpr int kMaxIterations = 3000000;
 
   InType input_data_;
 
@@ -46,6 +55,8 @@ TEST_P(AfanasyevAItSeidelMethodPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
+namespace {
+
 template <typename TaskType, typename InputType>
 auto MakePerfTaskTuples() {
   std::string name;
@@ -54,13 +65,18 @@ auto MakePerfTaskTuples() {
   } else if constexpr (std::is_same_v<TaskType, AfanasyevAItSeidelMethodSEQ>) {
     name = "afanasyev_a_it_seidel_method_seq";
   } else {
-    name = "unknown_task_" + std::to_string(rand());
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist;
+    name = "unknown_task_" + std::to_string(dist(gen));
   }
   auto task_lambda = [](const InputType &in) { return ppc::task::TaskGetter<TaskType, InputType>(in); };
 
   return std::make_tuple(std::make_tuple(task_lambda, name, ppc::performance::PerfResults::TypeOfRunning::kPipeline),
                          std::make_tuple(task_lambda, name, ppc::performance::PerfResults::TypeOfRunning::kTaskRun));
 }
+
+}  // namespace
 
 const auto kAllPerfTasks = std::tuple_cat(MakePerfTaskTuples<AfanasyevAItSeidelMethodMPI, InType>(),
                                           MakePerfTaskTuples<AfanasyevAItSeidelMethodSEQ, InType>());
