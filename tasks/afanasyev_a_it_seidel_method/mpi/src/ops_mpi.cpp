@@ -49,8 +49,25 @@ bool PerformIteration(int system_size, int start_row, int end_row, const std::ve
     local_x[i] = sum / a[i][i];
   }
 
-  MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
-                MPI_DOUBLE, MPI_COMM_WORLD);
+  int rank = 0;
+  int size = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  int rows_per_process = system_size / size;
+  int remainder = system_size % size;
+
+  std::vector<int> sendcounts(size);
+  std::vector<int> displs(size);
+  for (int r = 0; r < size; ++r) {
+    int cnt = rows_per_process + (r < remainder ? 1 : 0);
+    sendcounts[r] = cnt;
+    displs[r] = (r * rows_per_process) + std::min(r, remainder);
+  }
+
+  int sendcount = end_row - start_row;
+  MPI_Allgatherv(local_x.data() + start_row, sendcount, MPI_DOUBLE, global_x.data(), sendcounts.data(), displs.data(),
+                 MPI_DOUBLE, MPI_COMM_WORLD);
 
   return true;
 }
@@ -151,10 +168,6 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
     }
 
     if (CheckConvergence(rank, CalculateMaxDiff(global_x, prev_x), epsilon_, global_x, x_)) {
-      if (rank != 0) {
-        MPI_Allgather(local_x.data() + start_row, end_row - start_row, MPI_DOUBLE, global_x.data(), end_row - start_row,
-                      MPI_DOUBLE, MPI_COMM_WORLD);
-      }
       break;
     }
   }
@@ -171,12 +184,28 @@ bool AfanasyevAItSeidelMethodMPI::RunImpl() {
   } else {
     GetOutput() = std::vector<double>();
   }
+  // Synchronize output on all ranks so tests running per-process can validate output
+  {
+    int out_size = static_cast<int>(GetOutput().size());
+    MPI_Bcast(&out_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    GetOutput().resize(out_size);
+    if (out_size > 0) {
+      MPI_Bcast(GetOutput().data(), out_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+  }
 
   return true;
 }
 
 bool AfanasyevAItSeidelMethodMPI::PostProcessingImpl() {
   try {
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank != 0) {
+      return true;
+    }
+
     int system_size = static_cast<int>(A_.size());
     if (x_.size() != static_cast<std::size_t>(system_size)) {
       return false;

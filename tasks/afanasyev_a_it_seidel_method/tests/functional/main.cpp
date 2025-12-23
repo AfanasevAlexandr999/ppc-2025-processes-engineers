@@ -1,105 +1,78 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
+#include <array>
 #include <cstddef>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
 #include "afanasyev_a_it_seidel_method/mpi/include/ops_mpi.hpp"
 #include "afanasyev_a_it_seidel_method/seq/include/ops_seq.hpp"
+#include "util/include/func_test_util.hpp"
+#include "util/include/util.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 
-TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSeqSmallSystem) {
-  InType input = {3.0, 0.001, 100.0};
-  AfanasyevAItSeidelMethodSEQ task(input);
-
-  EXPECT_TRUE(task.Validation());
-  EXPECT_TRUE(task.PreProcessing());
-  EXPECT_TRUE(task.Run());
-  EXPECT_TRUE(task.PostProcessing());
-
-  auto output = task.GetOutput();
-  EXPECT_EQ(output.size(), static_cast<std::size_t>(3));
-}
-
-TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSeqMediumSystem) {
-  InType input = {5.0, 0.0001, 200.0};
-  AfanasyevAItSeidelMethodSEQ task(input);
-
-  EXPECT_TRUE(task.Validation());
-  EXPECT_TRUE(task.PreProcessing());
-  EXPECT_TRUE(task.Run());
-  EXPECT_TRUE(task.PostProcessing());
-
-  auto output = task.GetOutput();
-  EXPECT_EQ(output.size(), static_cast<std::size_t>(5));
-}
-
-TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodSeqLargeSystem) {
-  InType input = {7.0, 0.00001, 300.0};
-  AfanasyevAItSeidelMethodSEQ task(input);
-
-  EXPECT_TRUE(task.Validation());
-  EXPECT_TRUE(task.PreProcessing());
-  EXPECT_TRUE(task.Run());
-  EXPECT_TRUE(task.PostProcessing());
-
-  auto output = task.GetOutput();
-  EXPECT_EQ(output.size(), static_cast<std::size_t>(7));
-}
-
-TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMpiSmallSystem) {
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  InType input = {3.0, 0.001, 100.0};
-  AfanasyevAItSeidelMethodMPI task(input);
-
-  EXPECT_TRUE(task.Validation());
-  EXPECT_TRUE(task.PreProcessing());
-  EXPECT_TRUE(task.Run());
-  EXPECT_TRUE(task.PostProcessing());
-
-  if (rank == 0) {
-    auto output = task.GetOutput();
-    EXPECT_EQ(output.size(), static_cast<std::size_t>(3));
+class AfanasyevAItSeidelMethodFuncTests : public ppc::util::BaseRunFuncTests<InType, OutType, int> {
+ public:
+  static std::string PrintTestParam(const int &test_param) {
+    return "n_" + std::to_string(test_param);
   }
-}
 
-TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMpiMediumSystem) {
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  InType input = {5.0, 0.0001, 200.0};
-  AfanasyevAItSeidelMethodMPI task(input);
-
-  EXPECT_TRUE(task.Validation());
-  EXPECT_TRUE(task.PreProcessing());
-  EXPECT_TRUE(task.Run());
-  EXPECT_TRUE(task.PostProcessing());
-
-  if (rank == 0) {
-    auto output = task.GetOutput();
-    EXPECT_EQ(output.size(), static_cast<std::size_t>(5));
+ protected:
+  void SetUp() override {
+    const int system_size = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
+    input_data_.clear();
+    input_data_.push_back(static_cast<double>(system_size));
+    input_data_.push_back(1e-6);                       // epsilon
+    input_data_.push_back(static_cast<double>(1000));  // max iterations
   }
-}
 
-TEST(AfanasyevAItSeidelMethodFuncTests, SeidelMethodMpiLargeSystem) {
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  bool CheckTestOutputData(OutType &output_data) final {
+    int mpi_initialized = 0;
+    MPI_Initialized(&mpi_initialized);
 
-  InType input = {7.0, 0.00001, 300.0};
-  AfanasyevAItSeidelMethodMPI task(input);
+    if (mpi_initialized != 0) {
+      int world_rank = 0;
+      MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-  EXPECT_TRUE(task.Validation());
-  EXPECT_TRUE(task.PreProcessing());
-  EXPECT_TRUE(task.Run());
-  EXPECT_TRUE(task.PostProcessing());
+      if (world_rank != 0) {
+        return true;
+      }
+    }
 
-  if (rank == 0) {
-    auto output = task.GetOutput();
-    EXPECT_EQ(output.size(), static_cast<std::size_t>(7));
+    const int system_size = static_cast<int>(input_data_[0]);
+    return output_data.size() == static_cast<std::size_t>(system_size);
   }
+
+  InType GetTestInputData() final {
+    return input_data_;
+  }
+
+ private:
+  InType input_data_;
+};
+
+TEST_P(AfanasyevAItSeidelMethodFuncTests, SolveSystem) {
+  ExecuteTest(GetParam());
 }
+
+namespace {
+
+const std::array<int, 3> kTestParam = {3, 5, 10};
+
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<AfanasyevAItSeidelMethodMPI, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_it_seidel_method),
+    ppc::util::AddFuncTask<AfanasyevAItSeidelMethodSEQ, InType>(kTestParam, PPC_SETTINGS_afanasyev_a_it_seidel_method));
+
+const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
+
+const auto kFuncTestName = AfanasyevAItSeidelMethodFuncTests::PrintFuncTestName<AfanasyevAItSeidelMethodFuncTests>;
+
+INSTANTIATE_TEST_SUITE_P(SolveTests, AfanasyevAItSeidelMethodFuncTests, kGtestValues, kFuncTestName);
+
+}  // namespace
 
 }  // namespace afanasyev_a_it_seidel_method

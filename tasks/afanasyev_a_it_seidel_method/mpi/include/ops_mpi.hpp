@@ -8,6 +8,9 @@ namespace afanasyev_a_it_seidel_method {
 
 class AfanasyevAItSeidelMethodMPI : public BaseTask {
  public:
+  static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
+    return ppc::task::TypeOfTask::kMPI;
+  }
   explicit AfanasyevAItSeidelMethodMPI(const InType &in);
   bool ValidationImpl() override;
   bool PreProcessingImpl() override;

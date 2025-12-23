@@ -8,6 +8,9 @@ namespace afanasyev_a_it_seidel_method {
 
 class AfanasyevAItSeidelMethodSEQ : public BaseTask {
  public:
+  static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
+    return ppc::task::TypeOfTask::kSEQ;
+  }
   explicit AfanasyevAItSeidelMethodSEQ(const InType &in);
   bool ValidationImpl() override;
   bool PreProcessingImpl() override;
