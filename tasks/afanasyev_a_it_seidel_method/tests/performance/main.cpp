@@ -5,7 +5,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <utility>
 
 #include "afanasyev_a_it_seidel_method/common/include/common.hpp"
 #include "afanasyev_a_it_seidel_method/mpi/include/ops_mpi.hpp"
@@ -13,6 +12,7 @@
 #include "performance/include/performance.hpp"
 #include "task/include/task.hpp"
 #include "util/include/perf_test_util.hpp"
+#include "util/include/util.hpp"
 
 namespace afanasyev_a_it_seidel_method {
 
@@ -22,13 +22,13 @@ class AfanasyevAItSeidelMethodPerfTests : public ppc::util::BaseRunPerfTests<InT
   static constexpr double kEpsilon = 1e-6;
   static constexpr int kMaxIterations = 3000000;
 
-  InType input_data_;
+  InType input_data;
 
   void SetUp() override {
-    input_data_.clear();
-    input_data_.push_back(static_cast<double>(kSystemSize));
-    input_data_.push_back(kEpsilon);
-    input_data_.push_back(static_cast<double>(kMaxIterations));
+    input_data.clear();
+    input_data.push_back(static_cast<double>(kSystemSize));
+    input_data.push_back(kEpsilon);
+    input_data.push_back(static_cast<double>(kMaxIterations));
   }
 
   bool CheckTestOutputData(OutType &output_data) override {
@@ -36,7 +36,7 @@ class AfanasyevAItSeidelMethodPerfTests : public ppc::util::BaseRunPerfTests<InT
   }
 
   InType GetTestInputData() override {
-    return input_data_;
+    return input_data;
   }
 
  public:
