@@ -9,11 +9,11 @@ namespace afanasyev_a_batch_sort {
 
 class AfanasyevABatchSortPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:
-  static constexpr int k_count = 15000000;
+  static constexpr int kCount = 15000000;
   InType input_data{};
 
   void SetUp() override {
-    input_data = k_count;
+    input_data = kCount;
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
